@@ -1,0 +1,149 @@
+#pragma once
+
+#include "twrf/core/types.hpp"
+#include "twrf/core/resource.hpp"
+#include "twrf/core/state_store.hpp"
+#include <string>
+#include <vector>
+#include <functional>
+#include <memory>
+
+namespace twrf {
+
+struct ResourceBinding {
+    ResourceId resource_id{0};
+    VersionNumber recorded_version{INVALID_VERSION};
+};
+
+struct UpstreamBinding {
+    TWRId producer_id{0};
+    VersionNumber recorded_version{INVALID_VERSION};
+};
+
+class TemporalWorkRegion;
+
+using KernelCallback = std::function<bool(TemporalWorkRegion& self,
+                                          LogicalStateStore& state_store,
+                                          const std::vector<const VersionedResource*>& inputs)>;
+
+class TemporalWorkRegion {
+public:
+    TemporalWorkRegion(TWRId id, std::string name, BoundingRegion region = BoundingRegion::full_screen(), int32_t priority = 0)
+        : id_(id), name_(std::move(name)), region_(region), priority_(priority) {}
+
+    [[nodiscard]] TWRId id() const noexcept { return id_; }
+    [[nodiscard]] const std::string& name() const noexcept { return name_; }
+    [[nodiscard]] const BoundingRegion& region() const noexcept { return region_; }
+    [[nodiscard]] TWRStatus status() const noexcept { return status_; }
+    [[nodiscard]] ExecutionReason execution_reason() const noexcept { return execution_reason_; }
+    [[nodiscard]] int32_t priority() const noexcept { return priority_; }
+    [[nodiscard]] uint32_t topological_depth() const noexcept { return topological_depth_; }
+    [[nodiscard]] uint32_t pending_dependencies() const noexcept { return pending_dependencies_; }
+    [[nodiscard]] VersionNumber current_output_version() const noexcept { return current_output_version_; }
+    [[nodiscard]] uint64_t total_executions() const noexcept { return total_executions_; }
+    [[nodiscard]] uint64_t total_skips() const noexcept { return total_skips_; }
+
+    [[nodiscard]] const std::vector<ResourceBinding>& resource_bindings() const noexcept { return resource_bindings_; }
+    [[nodiscard]] const std::vector<UpstreamBinding>& upstream_producers() const noexcept { return upstream_producers_; }
+    [[nodiscard]] const std::vector<TWRId>& downstream_consumers() const noexcept { return downstream_consumers_; }
+
+    void set_region(const BoundingRegion& region) noexcept { region_ = region; }
+    void set_priority(int32_t priority) noexcept { priority_ = priority; }
+    void set_topological_depth(uint32_t depth) noexcept { topological_depth_ = depth; }
+    void set_kernel(KernelCallback kernel) { kernel_ = std::move(kernel); }
+
+    void bind_resource(ResourceId id, VersionNumber recorded = INVALID_VERSION) {
+        resource_bindings_.push_back({id, recorded});
+    }
+
+    void add_upstream_dependency(TWRId producer_id, VersionNumber recorded = INVALID_VERSION) {
+        upstream_producers_.push_back({producer_id, recorded});
+    }
+
+    void add_downstream_consumer(TWRId consumer_id) {
+        downstream_consumers_.push_back(consumer_id);
+    }
+
+    void mark_dirty(ExecutionReason reason) noexcept {
+        status_ = TWRStatus::Dirty;
+        execution_reason_ = reason;
+    }
+
+    void set_ready() noexcept {
+        status_ = TWRStatus::Ready;
+    }
+
+    void set_executing() noexcept {
+        status_ = TWRStatus::Executing;
+    }
+
+    void mark_clean() noexcept {
+        status_ = TWRStatus::IdleClean;
+        execution_reason_ = ExecutionReason::None;
+    }
+
+    void record_skip() noexcept {
+        total_skips_++;
+    }
+
+    void reset_pending_dependencies() noexcept {
+        pending_dependencies_ = static_cast<uint32_t>(upstream_producers_.size());
+    }
+
+    void set_pending_dependencies(uint32_t count) noexcept {
+        pending_dependencies_ = count;
+    }
+
+    void decrement_pending_dependencies() noexcept {
+        if (pending_dependencies_ > 0) {
+            pending_dependencies_--;
+        }
+    }
+
+    bool execute(LogicalStateStore& state_store,
+                 const std::vector<const VersionedResource*>& inputs,
+                 [[maybe_unused]] Timestamp step) {
+        if (!kernel_) return false;
+        set_executing();
+        total_executions_++;
+
+        bool ok = kernel_(*this, state_store, inputs);
+        if (ok) {
+            current_output_version_++;
+            // Update recorded versions to match latest inputs
+            for (size_t i = 0; i < resource_bindings_.size() && i < inputs.size(); ++i) {
+                if (inputs[i]) {
+                    resource_bindings_[i].recorded_version = inputs[i]->version();
+                }
+            }
+            for (auto& up : upstream_producers_) {
+                up.recorded_version = state_store.get_output_version(up.producer_id);
+            }
+        }
+        mark_clean();
+        return ok;
+    }
+
+private:
+    TWRId id_;
+    std::string name_;
+    BoundingRegion region_;
+    int32_t priority_{0};
+    uint32_t topological_depth_{0};
+    uint32_t pending_dependencies_{0};
+
+    TWRStatus status_{TWRStatus::Dirty};
+    ExecutionReason execution_reason_{ExecutionReason::Initial};
+
+    VersionNumber current_output_version_{INITIAL_VERSION};
+    uint64_t total_executions_{0};
+    uint64_t total_skips_{0};
+
+    std::vector<ResourceBinding> resource_bindings_;
+    std::vector<UpstreamBinding> upstream_producers_;
+    std::vector<TWRId> downstream_consumers_;
+
+    KernelCallback kernel_;
+};
+
+} // namespace twrf

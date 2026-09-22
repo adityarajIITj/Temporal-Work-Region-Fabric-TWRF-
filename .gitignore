@@ -1,0 +1,106 @@
+# ==============================================================================
+# TWRF Git Ignore Configuration
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Initial Prompt & Instruction Documents
+# ------------------------------------------------------------------------------
+TWRF_4_SubPlans_Coding_Agent.md
+richtext_converted_to_markdown.md
+
+# Scratch and smoke test files
+test_smoke.cpp
+scratch/
+
+# ------------------------------------------------------------------------------
+# 2. Build Directories & Artifacts
+# ------------------------------------------------------------------------------
+build/
+bin/
+lib/
+out/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.ninja
+.ninja_*
+ninja.log
+CTestTestfile.cmake
+Testing/
+
+# Compiled Binaries & Libraries
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exp
+
+# ------------------------------------------------------------------------------
+# 3. Generated Simulation Outputs & Heavy Media
+# ------------------------------------------------------------------------------
+results/*.ppm
+results/*.raw
+results/*.dat
+results/*.hex
+results/*.bin
+results/*.bmp
+
+# ------------------------------------------------------------------------------
+# 4. Python Bytecode & Environments
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+env/
+venv/
+.venv/
+ENV/
+
+# ------------------------------------------------------------------------------
+# 5. IDE, Editor & OS Configuration (Excluding Local PC Paths & State)
+# ------------------------------------------------------------------------------
+# Visual Studio & VS Code
+.vscode/
+.vs/
+*.sln.docstates
+*.suo
+*.user
+*.userosv
+
+# JetBrains
+.idea/
+*.iml
+
+# Agent, LLM & Local IDE Workspaces
+.gemini/
+.agents/
+*.log
+
+# Windows OS specific
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+._*

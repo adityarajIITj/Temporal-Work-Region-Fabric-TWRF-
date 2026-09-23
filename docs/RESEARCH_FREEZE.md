@@ -75,10 +75,10 @@ The implemented sensitivity grid contains:
 - 3 tile sizes: 8, 16, 32;
 - 6 TWRF hardware control-plane multipliers: 0.25, 0.50, 0.75, 1.00, 1.50, 2.00;
 - 3 TWRF State Store latency multipliers: 0.50, 1.00, 2.00;
-- 54 parameter settings total;
+- 135 parameter settings total;
 - 14 matrix cases evaluated per setting.
 
-All 54 settings in the successful artifact place TWRF below Baseline C for all 14 matrix cases. Across the grid, the minimum B3/TWRF ratio is 1.0259823577 and the maximum is 7.9190150479.
+All 135 settings in the successful artifact place TWRF below Baseline C for all 14 matrix cases. Across the grid, the minimum B3/TWRF ratio is 1.0259823577 and the maximum is 7.9190150479.
 
 This is a robustness result over the declared tested range. It is not a proof of an unrestricted global cost boundary because software-baseline parameters, dependency depth, State Store capacity pressure, and larger workload families were not exhaustively swept.
 

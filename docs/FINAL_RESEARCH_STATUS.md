@@ -36,6 +36,8 @@ The repository currently contains:
 - derived-ray refresh after camera mutation;
 - heterogeneous Raster -> Ray, Raster -> Neural, and Ray -> Neural dependencies;
 - parameterized A/B/C/TWRF timing models;
+- a 54-setting timing sensitivity grid over region size, control-plane cost, and State Store latency;
+- machine-readable sensitivity export and CI validation;
 - measured control-plane operation counters;
 - 7 x 2 mutation/locality experimental matrix generation;
 - machine-readable experiment output and analysis plotting;

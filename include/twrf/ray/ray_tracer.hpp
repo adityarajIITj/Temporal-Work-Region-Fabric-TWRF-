@@ -148,7 +148,9 @@ public:
                 offset += payload.hit_normals.size() * sizeof(Vec3);
                 std::memcpy(raw_buf.data() + offset, payload.occlusions.data(), payload.occlusions.size() * sizeof(float));
 
-                store.write_output(self.id(), raw_buf.data(), raw_buf.size(), self.current_output_version() + 1);
+                if (!store.write_output(self.id(), raw_buf.data(), raw_buf.size(), self.current_output_version() + 1)) return false;
+
+
                 return true;
             });
         }

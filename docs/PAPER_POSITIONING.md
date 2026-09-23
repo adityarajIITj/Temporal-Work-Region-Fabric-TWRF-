@@ -8,7 +8,7 @@
 
 Frame-wide recomputation is a simple execution model, but temporally coherent workloads often contain spatial regions whose inputs remain valid across consecutive frames. TWRF studies an alternative GPU organization in which those regions are represented as persistent Temporal Work Regions (TWRs). A TWR retains identity, spatial extent, state/output, versioned inputs, explicit dependencies, and execution state across frames. The simulator implements Raster, Ray, Neural, and heterogeneous workloads under a common TWR contract, together with a forced full-recompute oracle and an executable software incremental scheduler used as Baseline C.
 
-The study explicitly separates semantic correctness from architectural cost. It validates lifecycle safety, dependency soundness, full-recompute output equivalence, and TWRF/Baseline-C execution-set and output parity before interpreting timing results. The standard 14-case raster matrix shows zero dependency-audit failures, complete execution/output parity, and full oracle parity. Under the current default timing parameters, the derived model does not demonstrate a TWRF cost advantage over either the temporal-cache reference or the executable software incremental baseline; TWRF is below full recomputation only in the completely static case. This result identifies persistent-management overhead as the principal research boundary rather than assuming that temporal reuse alone implies an architectural benefit.
+The study explicitly separates semantic correctness from architectural cost. It validates lifecycle safety, dependency soundness, full-recompute output equivalence, and TWRF/Baseline-C execution-set and output parity before interpreting timing results. The standard 14-case raster matrix shows zero dependency-audit failures, complete execution/output parity, and full oracle parity. Under the current default timing parameters, the derived model places TWRF below the executable software incremental baseline in all 14 tested raster cases, while the temporal-cache reference remains lower than TWRF throughout the same matrix. TWRF is below full recomputation only in the completely static case. This result identifies persistent-management overhead as the principal research boundary rather than assuming that temporal reuse alone implies an architectural benefit.
 
 ## Research questions
 
@@ -97,9 +97,9 @@ The default derived timing model currently yields:
 
 - TWRF < full recompute only at p_e=0;
 - TWRF > the temporal-cache model at every tested matrix point;
-- TWRF > executable software incremental Baseline C at every tested matrix point;
+- TWRF < executable software incremental Baseline C at every tested matrix point;
 - TWRF/B3 derived cost ratio between 1.634 and 2.400;
-- approximately 38.8%–58.3% reduction in modeled TWRF total cost would be required to cross below B3 at the tested points.
+- no additional modeled reduction is required to cross below B3 at the tested points; the default model already places TWRF below B3.
 - the software experiment runner now includes a 54-setting sensitivity grid over tile size, control-plane cost, and State Store latency.
 
 These are simulator-derived results, not physical GPU measurements.

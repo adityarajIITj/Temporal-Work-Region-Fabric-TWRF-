@@ -167,6 +167,7 @@ public:
             auto& twr_neural = graph_->add_twr(neural_id, "NeuralDenoise_" + std::to_string(i));
             graph_->bind_resource(neural_id, HET_WEIGHTS_RES_ID);
             graph_->connect_dependency(ray_id, neural_id); // Ray -> Neural dependency
+            graph_->connect_dependency(raster_id, neural_id); // Neural directly consumes Raster G-Buffer
 
             twr_neural.set_kernel([this, raster_id, ray_id](TemporalWorkRegion& self, LogicalStateStore& store,
                                                            const std::vector<const VersionedResource*>&) -> bool {

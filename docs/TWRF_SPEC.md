@@ -207,11 +207,11 @@ Cycle parameters are configurable and do not represent measured silicon.
 The standard sweep reports:
 
 [
-p_o=rac{mutated objects}{objects},
+p_o=\frac{mutated objects}{objects},
 quad
-p_r=rac{dirty regions}{regions},
+p_r=\frac{dirty regions}{regions},
 quad
-p_e=rac{executed regions}{regions}.
+p_e=\frac{executed regions}{regions}.
 ]
 
 The requested change-rate sweep is:

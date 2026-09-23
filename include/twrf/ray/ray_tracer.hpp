@@ -61,6 +61,7 @@ public:
     [[nodiscard]] LogicalStateStore& state_store() noexcept { return state_store_; }
     [[nodiscard]] const ExecutionTrace& trace() const noexcept { return trace_; }
     [[nodiscard]] const MetricsCollector& metrics() const noexcept { return metrics_; }
+    [[nodiscard]] const std::vector<RayBatch>& batches() const noexcept { return batches_; }
 
     void regenerate_primary_rays() {
         batches_.resize(batch_count_);

@@ -114,17 +114,19 @@ These categories must not be conflated in a paper or presentation.
 
 ## Prior-art boundary
 
-The research does not claim individual novelty for incremental computation, dependency tracking, memoization, persistent graphics resources, spatial tiling, or incremental path-traced rendering.
+The research does not claim individual novelty for incremental computation, dependency tracking, memoization, persistent graphics resources, spatial tiling, incremental path-traced rendering, or GPU graph scheduling.
 
 The defensible claim is that TWRF investigates the particular GPU-oriented combination and its architectural cost/benefit boundary.
 
 ## Current experimental finding
 
-The validated 14-case raster matrix has full execution-set parity, full output parity, and zero dependency-audit failures. Under the current default timing parameters, the derived model does not show TWRF beating Baseline C or the temporal-cache model across the tested mutation/locality cases. TWRF is below the full-recompute model only for the completely static case. See docs/RESULTS.md for the complete matrix and interpretation.
+The validated 14-case raster matrix has full execution-set parity, full output parity, and zero dependency-audit failures. Under the current default timing parameters, the derived model places TWRF below Baseline C in all 14 cases, while the temporal-cache model remains lower than TWRF across the tested matrix. TWRF is below the full-recompute model only for the completely static case. See docs/RESULTS.md for the complete matrix and interpretation.
+
+The successful CI run 76 built the project, passed all 35 registered tests, executed the demo, and passed machine-readable JSON validation. A generated research artifact from the preceding successful run 75 is retained by CI and contains the 14-case matrix and 54-setting sensitivity output; later source-only cleanups do not alter those measured/derived experiment semantics.
 
 ## Remaining external validation
 
-The following are outside the current software-simulator evidence boundary:
+The following remain outside the software-simulator evidence boundary:
 
 - physical GPU benchmarking;
 - production driver overhead;

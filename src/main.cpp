@@ -81,6 +81,16 @@ int main() {
         return 2;
     }
 
+    const auto sensitivity_data =
+        twrf::timing::ExperimentRunner::run_sensitivity_grid();
+    const bool sensitivity_exported =
+        twrf::timing::ExperimentRunner::export_sensitivity_json(
+            "results/twrf_sensitivity.json", sensitivity_data);
+    if (!sensitivity_exported) {
+        std::cerr << "[ERROR] Failed to export sensitivity results.\n";
+        return 2;
+    }
+
     size_t parity_failures = 0;
     size_t output_failures = 0;
     size_t audit_failures = 0;
@@ -107,7 +117,9 @@ int main() {
     }
 
     std::cout
+        << "Sensitivity settings: " << sensitivity_data.size() << "\n"
         << "Machine-readable results: results/phase3_sweeps.json\n"
+        << "Sensitivity results: results/twrf_sensitivity.json\n"
         << "========================================================================\n"
         << "                     TWRF DEMONSTRATION COMPLETE                      \n"
         << "========================================================================\n";

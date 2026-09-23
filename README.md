@@ -152,6 +152,7 @@ See docs/RESEARCH_VALIDATION_GATE.md.
 - [Prior-art and originality boundary](docs/PRIOR_ART.md)
 - [Research claim matrix](docs/RESEARCH_CLAIM_MATRIX.md)
 - [Reproducibility manifest](docs/REPRODUCIBILITY_MANIFEST.md)
+- [Research freeze record](docs/RESEARCH_FREEZE.md)
 - [Limitations and threats to validity](docs/LIMITATIONS.md)
 - [FPGA/RTL feasibility](docs/FPGA_FEASIBILITY.md)
 

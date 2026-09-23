@@ -61,6 +61,12 @@ public:
         }
     }
 
+    void observe_upstream_producer(TWRId producer_id) {
+        if (dependency_audit_enabled_) {
+            observed_producer_reads_.insert(producer_id);
+        }
+    }
+
     [[nodiscard]] const std::unordered_set<ResourceId>& observed_resource_reads() const noexcept {
         return observed_resource_reads_;
     }
@@ -76,10 +82,52 @@ public:
             }
             if (!declared) return false;
         }
+        for (TWRId observed : observed_producer_reads_) {
+            bool declared = false;
+            for (const auto& binding : upstream_producers_) {
+                if (binding.producer_id == observed) {
+                    declared = true;
+                    break;
+                }
+            }
+            if (!declared) return false;
+        }
         return true;
     }
 
     [[nodiscard]] std::string dependency_audit_report() const {
+        std::ostringstream out;
+        out << "TWR " << id_ << " dependency audit: ";
+        if (dependency_audit_passes()) {
+            out << "PASS";
+            return out.str();
+        }
+        out << "FAIL; undeclared dependencies:";
+        bool first = true;
+        for (ResourceId observed : observed_resource_reads_) {
+            bool declared = false;
+            for (const auto& binding : resource_bindings_) {
+                if (binding.resource_id == observed) { declared = true; break; }
+            }
+            if (!declared) {
+                out << (first ? " resource=" : ", resource=") << observed;
+                first = false;
+            }
+        }
+        for (TWRId observed : observed_producer_reads_) {
+            bool declared = false;
+            for (const auto& binding : upstream_producers_) {
+                if (binding.producer_id == observed) { declared = true; break; }
+            }
+            if (!declared) {
+                out << (first ? " producer=" : ", producer=") << observed;
+                first = false;
+            }
+        }
+        return out.str();
+    }
+
+    [[nodiscard]] std::string dependency_audit_report_old() const {
         std::ostringstream out;
         out << "TWR " << id_ << " dependency audit: ";
         if (dependency_audit_passes()) {
@@ -172,6 +220,7 @@ public:
         set_executing();
         total_executions_++;
         observed_resource_reads_.clear();
+        observed_producer_reads_.clear();
 
         bool ok = kernel_(*this, state_store, inputs);
         if (ok) {
@@ -220,6 +269,7 @@ private:
 
     bool dependency_audit_enabled_{false};
     std::unordered_set<ResourceId> observed_resource_reads_;
+    std::unordered_set<TWRId> observed_producer_reads_;
 };
 
 } // namespace twrf

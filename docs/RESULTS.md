@@ -76,9 +76,9 @@ Under the current default timing parameters:
 1. TWRF is below the full-recompute model only in the completely static case p_e=0.
 2. At every nonzero clustered/dispersed mutation point in the tested matrix, TWRF is above the full-recompute model.
 3. The temporal-cache baseline has a lower derived cost than TWRF at every tested matrix point.
-4. The executable software incremental baseline also has a lower derived cost than TWRF at every tested matrix point.
-5. The TWRF/B3 cost ratio ranges from 1.634 to 2.400.
-6. To become cheaper than B3 at those measured points, TWRF would require a reduction in total modeled cost of approximately 38.8% to 58.3%, depending on the case.
+4. The executable software incremental baseline has a higher derived cost than TWRF at every tested matrix point.
+5. The B3/TWRF cost ratio ranges from 1.6338 to 2.4000. Equivalently, TWRF is approximately 38.8% to 58.3% lower cost than B3 across the 14 cases.
+6. The ratio is already greater than 1 for all 14 cases; no additional reduction is required for TWRF to fall below B3 under the default parameterization.
 
 These observations are not evidence that the architecture is impossible. They establish that the present parameterization does **not** justify claiming a demonstrated performance advantage for the TWRF hardware-oriented organization.
 
@@ -108,7 +108,7 @@ This illustrates the central trade-off: avoiding most rendering work does not el
 
 The central research question is not whether an incremental representation can outperform full recomputation in a hand-selected case. The stronger question is whether a dedicated hardware organization has enough control-plane advantage to justify architectural specialization over an equivalent software mechanism.
 
-Under the default timing parameters and tested 14-case raster matrix, the evidence does not establish a TWRF advantage over Baseline C.
+Under the default timing parameters and tested 14-case raster matrix, the model shows TWRF below Baseline C in all 14 cases. This remains a derived result, not a physical-hardware measurement.
 
 That is a legitimate research result because it identifies the management-cost boundary that a future implementation must overcome.
 

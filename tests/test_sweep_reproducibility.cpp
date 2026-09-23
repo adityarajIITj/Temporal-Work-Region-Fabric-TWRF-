@@ -23,6 +23,12 @@ int main() {
                     "S3-06 Failed: Baseline A total cycles non-deterministic across reruns");
         TWRF_ASSERT(std::abs(p1.baseline_b_cycles.total_cycles() - p2.baseline_b_cycles.total_cycles()) < 1e-6,
                     "S3-06 Failed: Baseline B total cycles non-deterministic across reruns");
+        TWRF_ASSERT(std::abs(p1.baseline_c_cycles.total_cycles() - p2.baseline_c_cycles.total_cycles()) < 1e-6,
+                    "S3-06 Failed: Baseline C total cycles non-deterministic across reruns");
+        TWRF_ASSERT(p1.execution_set_parity == p2.execution_set_parity && p1.execution_set_parity,
+                    "S3-06 Failed: B3 execution parity is non-deterministic");
+        TWRF_ASSERT(p1.output_parity == p2.output_parity && p1.output_parity,
+                    "S3-06 Failed: B3 output parity is non-deterministic");
     }
 
     TWRF_TEST_PASS("S3-06: Scientific Sweep Reproducibility Across Reruns");

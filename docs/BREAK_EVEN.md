@@ -31,8 +31,8 @@ C_t+p_eC_r<C_r
 which gives:
 
 [
-oxed{
-p_e<1-rac{C_t}{C_r}
+\boxed{
+p_e<1-\frac{C_t}{C_r}
 }
 ]
 
@@ -43,7 +43,7 @@ The right-hand side is an analytical threshold, not a measured universal propert
 The expression
 
 [
-p>rac{C_t}{C_r}
+p>\frac{C_t}{C_r}
 ]
 
 does not describe the TWRF break-even condition.
@@ -97,21 +97,21 @@ The workload generator starts with an object mutation parameter:
 
 [
 p_o=
-rac{mutated objects}{objects}.
+\frac{mutated objects}{objects}.
 ]
 
 The fabric then produces:
 
 [
 p_r=
-rac{dirty regions}{regions}
+\frac{dirty regions}{regions}
 ]
 
 and:
 
 [
 p_e=
-rac{executed regions}{regions}.
+\frac{executed regions}{regions}.
 ]
 
 The practical break-even analysis should therefore use (p_e), because (p_e) is the quantity that determines how much recomputation is actually avoided.
@@ -127,7 +127,7 @@ The useful design question is not:
 It is:
 
 [
-oxed{
+\boxed{
 	ext{When does the cost of managing persistent work become lower than the cost of repeating valid computation?}
 }
 ]

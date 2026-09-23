@@ -1,0 +1,36 @@
+name: TWRF Validation
+
+on:
+  push:
+    branches:
+      - research/p0-semantic-hardening
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Smoke demo
+        run: ./build/twrf_demo > /tmp/twrf_demo.log
+
+      - name: Validate JSON
+        run: python3 - <<'PY'
+import json
+with open("results/phase3_sweeps.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
+assert len(data["change_rate_sweep"]) == 7
+assert len(data["locality_sweep"]) == 2
+print("JSON validation passed")
+PY

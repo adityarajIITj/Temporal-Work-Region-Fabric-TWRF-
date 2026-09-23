@@ -32,6 +32,7 @@ struct RenderResult {
     FrameBuffer framebuffer;
     uint64_t mutated_resources{0};
     std::vector<bool> executed_tiles;
+    uint64_t dirty_twr_count{0};
 };
 
 class TWRFRenderer {
@@ -246,6 +247,10 @@ public:
         scheduler_.run_frame(*graph_, state_store_, trace_, metrics_);
 
         size_t trace_end = trace_.entries().size();
+        uint64_t frame_dirty = 0;
+        for (const auto& [id, twr] : graph_->twrs()) {
+            if (twr->status() == TWRStatus::Dirty) frame_dirty++;
+        }
         uint64_t frame_execs = metrics_.total_twr_executions - exec_before;
         uint64_t frame_skips = metrics_.total_twr_skips - skip_before;
         double skip_ratio = (frame_execs + frame_skips > 0)
@@ -276,7 +281,8 @@ public:
             skip_ratio,
             framebuffer_,
             frame_mutated,
-            std::move(executed_tiles)
+            std::move(executed_tiles),
+            frame_dirty
         };
     }
 
@@ -293,6 +299,10 @@ public:
                                        software_trace_, software_metrics_);
 
         size_t trace_end = software_trace_.entries().size();
+        uint64_t frame_dirty = 0;
+        for (const auto& [id, twr] : graph_->twrs()) {
+            if (twr->status() == TWRStatus::Dirty) frame_dirty++;
+        }
         uint64_t frame_execs =
             software_metrics_.total_twr_executions - exec_before;
         uint64_t frame_skips =
@@ -326,7 +336,8 @@ public:
             skip_ratio,
             framebuffer_,
             frame_mutated,
-            std::move(executed_tiles)
+            std::move(executed_tiles),
+            frame_dirty
         };
     }
 

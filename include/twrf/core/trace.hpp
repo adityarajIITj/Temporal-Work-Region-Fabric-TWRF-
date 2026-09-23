@@ -50,9 +50,25 @@ public:
         return ids;
     }
 
+    [[nodiscard]] std::vector<TWRId> executed_ids_since(size_t begin_index) const {
+        std::vector<TWRId> ids;
+        for (size_t i = begin_index; i < entries_.size(); ++i) {
+            if (entries_[i].executed) ids.push_back(entries_[i].twr_id);
+        }
+        std::sort(ids.begin(), ids.end());
+        return ids;
+    }
+
     [[nodiscard]] bool execution_set_equals(const ExecutionTrace& other,
                                             Timestamp step) const {
         return executed_ids(step) == other.executed_ids(step);
+    }
+
+    [[nodiscard]] bool execution_set_equals_since(const ExecutionTrace& other,
+                                                  size_t begin_index,
+                                                  size_t other_begin_index) const {
+        return executed_ids_since(begin_index) ==
+               other.executed_ids_since(other_begin_index);
     }
 
 

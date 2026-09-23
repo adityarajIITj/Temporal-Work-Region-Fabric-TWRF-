@@ -139,6 +139,15 @@ public:
 
         // Execute kernel
         bool success = twr->execute(state_store, inputs, step_counter_);
+
+        if (twr->dependency_audit_enabled()) {
+            if (twr->dependency_audit_passes()) {
+                metrics.dependency_audit_passes++;
+            } else {
+                metrics.dependency_audit_failures++;
+            }
+        }
+
         if (success) {
             metrics.total_twr_executions++;
             trace.record_execution(step_counter_, twr->id(), twr->name(),

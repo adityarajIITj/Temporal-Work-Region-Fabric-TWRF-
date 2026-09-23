@@ -139,7 +139,7 @@ public:
 
         // Software dependency traversal/notification.
         acc.dependency_cycles +=
-            renderer.metrics().dependency_traversals *
+            renderer.software_metrics().dependency_traversals *
             params.sw_cycles_dependency_notify;
 
         for (int i = 0; i < total_tiles; ++i) {

@@ -143,6 +143,18 @@ The project uses the following evidence ladder:
 
 See docs/RESEARCH_VALIDATION_GATE.md.
 
+## Research documentation
+
+- [TWRF architecture specification](docs/TWRF_SPEC.md)
+- [Formal execution semantics](docs/SEMANTICS.md)
+- [Research validation gates](docs/RESEARCH_VALIDATION_GATE.md)
+- [Experimental results](docs/RESULTS.md)
+- [Prior-art and originality boundary](docs/PRIOR_ART.md)
+- [Research claim matrix](docs/RESEARCH_CLAIM_MATRIX.md)
+- [Reproducibility manifest](docs/REPRODUCIBILITY_MANIFEST.md)
+- [Limitations and threats to validity](docs/LIMITATIONS.md)
+- [FPGA/RTL feasibility](docs/FPGA_FEASIBILITY.md)
+
 ## Running the project
 
 ### CMake

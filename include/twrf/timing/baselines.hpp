@@ -112,6 +112,62 @@ public:
         return acc;
     }
 
+    // Model 3: Baseline C (Software Incremental Runtime)
+    //
+    // This is intentionally a management-cost model, not yet a second
+    // renderer implementation. It uses the same measured execution set and
+    // workload event trace as TWRF, then assigns software-side bookkeeping
+    // costs to equivalent operations. It is therefore suitable for sensitivity
+    // analysis, but must not be presented as measured software-runtime speedup.
+    static CycleAccounting evaluate_baseline_c_software_incremental(
+            const raster::TWRFRenderer& renderer,
+            const raster::RenderResult& render_res,
+            const TimingParameters& params = TimingParameters::default_config()) {
+        CycleAccounting acc;
+        const auto& cfg = renderer.config();
+        const auto& sc = renderer.scene();
+        const int total_tiles = cfg.total_tiles();
+        const int tile_pixels = cfg.tile_size * cfg.tile_size;
+
+        // Software scans the same resource bindings to detect version changes.
+        acc.change_detect_cycles +=
+            params.sw_cycles_version_check * (1 + sc.objects.size()) * total_tiles;
+
+        // Explicit ready-set bookkeeping.
+        acc.scheduler_cycles +=
+            render_res.tiles_executed * params.sw_cycles_queue_operation * 2.0;
+
+        // Software dependency traversal/notification.
+        acc.dependency_cycles +=
+            renderer.metrics().dependency_traversals *
+            params.sw_cycles_dependency_notify;
+
+        for (int i = 0; i < total_tiles; ++i) {
+            bool executed = (i < static_cast<int>(render_res.executed_tiles.size()))
+                                ? render_res.executed_tiles[i] : false;
+            if (!executed) continue;
+
+            TileRecomputeWork w = compute_tile_work(renderer, i, params);
+            acc.compute_cycles += w.compute_cycles;
+            acc.scene_memory_cycles += w.memory_cycles;
+
+            size_t payload_bytes =
+                static_cast<size_t>(tile_pixels) *
+                (sizeof(raster::ColorRGBA) + sizeof(float));
+            acc.state_store_cycles +=
+                payload_bytes * params.sw_cycles_state_store_write_byte;
+        }
+
+        // Persistent software cache/state is still read for display.
+        size_t display_read_bytes =
+            static_cast<size_t>(tile_pixels) * sizeof(raster::ColorRGBA);
+        acc.state_store_cycles +=
+            static_cast<double>(total_tiles) * display_read_bytes *
+            params.sw_cycles_state_store_read_byte;
+
+        return acc;
+    }
+
     // Model 3: Baseline B (Conventional Temporal Cache / Software Reuse)
     static CycleAccounting evaluate_baseline_b_temporal_cache(const raster::TWRFRenderer& renderer,
                                                              const raster::RenderResult& render_res,

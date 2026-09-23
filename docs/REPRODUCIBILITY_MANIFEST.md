@@ -107,7 +107,7 @@ These cycles are modeled architectural values, not physical-GPU measurements.
 
 ## Sensitivity campaign
 
-The final runner generates 54 settings:
+The final runner generates 135 settings:
 
 - tile sizes: 8, 16, 32;
 - hardware control-plane multiplier: 0.25, 0.50, 0.75, 1.00, 1.50, 2.00;

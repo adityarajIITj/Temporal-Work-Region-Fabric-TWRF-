@@ -161,16 +161,15 @@ A TWRF advantage over Baseline A alone is insufficient to establish a hardware-a
 
 ## Gate 8 — Sensitivity analysis
 
-The final analysis should vary:
+The implementation now provides a reproducible 54-setting sensitivity grid:
 
-- timing overhead;
-- region granularity;
-- State Store capacity;
-- dependency depth;
-- locality;
-- execution fraction.
+- tile sizes: {8, 16, 32};
+- hardware control-plane multipliers: {0.25, 0.50, 0.75, 1.00, 1.50, 2.00};
+- State Store latency multipliers: {0.50, 1.00, 2.00}.
 
-The objective is not to select one favorable point but to characterize the boundary at which management overhead dominates computation savings.
+Each setting evaluates the complete 14-case mutation/locality matrix and preserves the same semantic workload and parity gates. The generated artifact is `results/twrf_sensitivity.json`.
+
+The objective is not to select one favorable point but to characterize the parameter boundary at which management overhead dominates computation savings. Any reported region in which TWRF is below Baseline C must still retain execution-set parity, output parity, zero dependency-audit failures, full-recompute correctness, and the declared timing assumptions.
 
 ## Gate 9 — Hardware realization boundary
 

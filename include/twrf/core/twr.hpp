@@ -127,27 +127,6 @@ public:
         return out.str();
     }
 
-    [[nodiscard]] std::string dependency_audit_report_old() const {
-        std::ostringstream out;
-        out << "TWR " << id_ << " dependency audit: ";
-        if (dependency_audit_passes()) {
-            out << "PASS";
-            return out.str();
-        }
-        out << "FAIL; undeclared resources:";
-        for (ResourceId observed : observed_resource_reads_) {
-            bool declared = false;
-            for (const auto& binding : resource_bindings_) {
-                if (binding.resource_id == observed) {
-                    declared = true;
-                    break;
-                }
-            }
-            if (!declared) out << " " << observed;
-        }
-        return out.str();
-    }
-
 
     [[nodiscard]] const std::vector<ResourceBinding>& resource_bindings() const noexcept { return resource_bindings_; }
     [[nodiscard]] const std::vector<UpstreamBinding>& upstream_producers() const noexcept { return upstream_producers_; }

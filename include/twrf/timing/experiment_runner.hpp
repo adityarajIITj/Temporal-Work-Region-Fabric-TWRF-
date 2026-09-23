@@ -95,8 +95,8 @@ public:
     static std::vector<SensitivityDataPoint> run_sensitivity_grid() {
         std::vector<SensitivityDataPoint> results;
         const int tile_sizes[] = {8, 16, 32};
-        const double control_multipliers[] = {0.25, 0.50, 0.75, 1.00, 1.50, 2.00};
-        const double state_store_multipliers[] = {0.50, 1.00, 2.00};
+        const double control_multipliers[] = {0.25, 0.50, 0.75, 1.00, 1.50, 2.00, 4.00, 8.00, 16.00};
+        const double state_store_multipliers[] = {0.50, 1.00, 2.00, 4.00, 8.00};
 
         for (int tile_size : tile_sizes) {
             for (double control_multiplier : control_multipliers) {

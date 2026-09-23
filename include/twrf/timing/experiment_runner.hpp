@@ -44,6 +44,19 @@ struct SweepDataPoint {
     }
 };
 
+struct SensitivityDataPoint {
+    int tile_size{16};
+    double hardware_control_multiplier{1.0};
+    double state_store_latency_multiplier{1.0};
+    uint64_t cases{0};
+    uint64_t twrf_wins_vs_a{0};
+    uint64_t twrf_wins_vs_b{0};
+    uint64_t twrf_wins_vs_c{0};
+    double twrf_vs_c_win_fraction{0.0};
+    double min_twrf_vs_c_ratio{0.0};
+    double max_twrf_vs_c_ratio{0.0};
+};
+
 class ExperimentRunner {
 public:
     static std::vector<SweepDataPoint> run_change_rate_sweep(
@@ -54,7 +67,8 @@ public:
 
         for (double p : change_rates) {
             results.push_back(run_single(frame_dim, tile_size, p,
-                                         raster::LocalityPattern::Clustered));
+                                         raster::LocalityPattern::Clustered,
+                                         TimingParameters::default_config()));
         }
         return results;
     }
@@ -63,15 +77,121 @@ public:
             int frame_dim = 128, int tile_size = 16) {
         std::vector<SweepDataPoint> results;
         results.push_back(run_single(frame_dim, tile_size, 0.25,
-                                     raster::LocalityPattern::Clustered));
+                                     raster::LocalityPattern::Clustered,
+                                     TimingParameters::default_config()));
         results.push_back(run_single(frame_dim, tile_size, 0.25,
-                                     raster::LocalityPattern::Dispersed));
+                                     raster::LocalityPattern::Dispersed,
+                                     TimingParameters::default_config()));
         return results;
     }
 
     // Full p x locality matrix for the final experimental campaign.
     static std::vector<SweepDataPoint> run_full_matrix(
             int frame_dim = 128, int tile_size = 16) {
+        return run_full_matrix(frame_dim, tile_size, TimingParameters::default_config());
+    }
+
+    static std::vector<SensitivityDataPoint> run_sensitivity_grid() {
+        std::vector<SensitivityDataPoint> results;
+        const int tile_sizes[] = {8, 16, 32};
+        const double control_multipliers[] = {0.25, 0.50, 0.75, 1.00, 1.50, 2.00};
+        const double state_store_multipliers[] = {0.50, 1.00, 2.00};
+
+        for (int tile_size : tile_sizes) {
+            for (double control_multiplier : control_multipliers) {
+                for (double state_multiplier : state_store_multipliers) {
+                    TimingParameters params = TimingParameters::default_config();
+                    params.cycles_version_check *= control_multiplier;
+                    params.cycles_bounding_check *= control_multiplier;
+                    params.cycles_queue_operation *= control_multiplier;
+                    params.cycles_dependency_notify *= control_multiplier;
+                    params.cycles_state_store_read_byte *= state_multiplier;
+                    params.cycles_state_store_write_byte *= state_multiplier;
+
+                    const auto matrix = run_full_matrix(128, tile_size, params);
+                    SensitivityDataPoint point;
+                    point.tile_size = tile_size;
+                    point.hardware_control_multiplier = control_multiplier;
+                    point.state_store_latency_multiplier = state_multiplier;
+                    point.cases = static_cast<uint64_t>(matrix.size());
+
+                    double min_ratio = 0.0;
+                    double max_ratio = 0.0;
+                    bool first_ratio = true;
+                    for (const auto& row : matrix) {
+                        point.twrf_wins_vs_a += row.twrf_wins_vs_a() ? 1U : 0U;
+                        point.twrf_wins_vs_b += row.twrf_wins_vs_b() ? 1U : 0U;
+                        point.twrf_wins_vs_c += row.twrf_wins_vs_c() ? 1U : 0U;
+                        const double ratio =
+                            safe_ratio(row.baseline_c_cycles.total_cycles(),
+                                       row.twrf_cycles.total_cycles());
+                        if (first_ratio) {
+                            min_ratio = max_ratio = ratio;
+                            first_ratio = false;
+                        } else {
+                            min_ratio = std::min(min_ratio, ratio);
+                            max_ratio = std::max(max_ratio, ratio);
+                        }
+                    }
+
+                    point.twrf_vs_c_win_fraction =
+                        point.cases > 0
+                            ? static_cast<double>(point.twrf_wins_vs_c) /
+                                  static_cast<double>(point.cases)
+                            : 0.0;
+                    point.min_twrf_vs_c_ratio = min_ratio;
+                    point.max_twrf_vs_c_ratio = max_ratio;
+                    results.push_back(point);
+                }
+            }
+        }
+        return results;
+    }
+
+    static bool export_sensitivity_json(
+            const std::string& filepath,
+            const std::vector<SensitivityDataPoint>& data) {
+        std::error_code ec;
+        const std::filesystem::path p(filepath);
+        if (p.has_parent_path()) {
+            std::filesystem::create_directories(p.parent_path(), ec);
+        }
+        std::ofstream ofs(filepath);
+        if (!ofs) return false;
+
+        ofs << std::setprecision(12);
+        ofs << "{
+  "sensitivity": [
+";
+        for (size_t i = 0; i < data.size(); ++i) {
+            const auto& point = data[i];
+            ofs << "    {"
+                << ""tile_size": " << point.tile_size
+                << ", "hardware_control_multiplier": "
+                << point.hardware_control_multiplier
+                << ", "state_store_latency_multiplier": "
+                << point.state_store_latency_multiplier
+                << ", "cases": " << point.cases
+                << ", "twrf_wins_vs_a": " << point.twrf_wins_vs_a
+                << ", "twrf_wins_vs_b": " << point.twrf_wins_vs_b
+                << ", "twrf_wins_vs_c": " << point.twrf_wins_vs_c
+                << ", "twrf_vs_c_win_fraction": "
+                << point.twrf_vs_c_win_fraction
+                << ", "min_twrf_vs_c_ratio": "
+                << point.min_twrf_vs_c_ratio
+                << ", "max_twrf_vs_c_ratio": "
+                << point.max_twrf_vs_c_ratio
+                << "}" << (i + 1 < data.size() ? "," : "") << "
+";
+        }
+        ofs << "  ]
+}
+";
+        return static_cast<bool>(ofs);
+    }
+
+    static std::vector<SweepDataPoint> run_full_matrix(
+            int frame_dim, int tile_size, const TimingParameters& params) {
         std::vector<SweepDataPoint> results;
         const double change_rates[] =
             {0.00, 0.05, 0.10, 0.25, 0.50, 0.75, 1.00};
@@ -82,7 +202,7 @@ public:
 
         for (auto pattern : patterns) {
             for (double p : change_rates) {
-                results.push_back(run_single(frame_dim, tile_size, p, pattern));
+                results.push_back(run_single(frame_dim, tile_size, p, pattern, params));
             }
         }
         return results;
@@ -124,7 +244,9 @@ public:
 
 private:
     static SweepDataPoint run_single(int frame_dim, int tile_size, double p,
-                                     raster::LocalityPattern locality) {
+                                     raster::LocalityPattern locality,
+                                     const TimingParameters& params =
+                                         TimingParameters::default_config()) {
         raster::TileConfig cfg;
         cfg.frame_width = frame_dim;
         cfg.frame_height = frame_dim;
@@ -203,15 +325,15 @@ private:
         // Gate 3 requires execution-set parity, this is the same semantic
         // workset as B3 when the parity gate passes.
         pt.twrf_cycles =
-            ArchitecturalModels::evaluate_twrf(twrf_renderer, twrf_res);
+            ArchitecturalModels::evaluate_twrf(twrf_renderer, twrf_res, params);
         pt.baseline_a_cycles =
-            ArchitecturalModels::evaluate_baseline_a_full_recompute(twrf_renderer);
+            ArchitecturalModels::evaluate_baseline_a_full_recompute(twrf_renderer, params);
         pt.baseline_b_cycles =
             ArchitecturalModels::evaluate_baseline_b_temporal_cache(
-                twrf_renderer, twrf_res);
+                twrf_renderer, twrf_res, params);
         pt.baseline_c_cycles =
             ArchitecturalModels::evaluate_baseline_c_software_incremental(
-                b3_renderer, b3_res);
+                b3_renderer, b3_res, params);
 
         return pt;
     }

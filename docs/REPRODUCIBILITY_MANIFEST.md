@@ -21,7 +21,7 @@ python3 python/analysis/plot_break_even.py
 Windows PowerShell:
 
 ```powershell
-.un.ps1
+.\run.ps1
 ```
 
 ## Standard raster campaign
@@ -73,17 +73,17 @@ B3 and TWRF receive the same scene construction, mutation event, TWR graph, kern
 
 The standard campaign requires:
 
-[
-ObservedMutableDependencies(TWR)subseteq DeclaredDependencies(TWR)
-]
+$
+ObservedMutableDependencies(TWR)\subseteq DeclaredDependencies(TWR)
+$
 
 and zero dependency-audit failures.
 
 The raster oracle requires bitwise equality:
 
-[
+$
 Output_{incremental}=Output_{full}.
-]
+$
 
 The B3 parity gate requires:
 
@@ -97,11 +97,11 @@ and bitwise framebuffer equality for the paired raster result.
 
 Cycle counts are calculated as:
 
-[
-C_{model}=sum_j n_jc_j
-]
+$
+C_{model}=\sum_j n_j c_j
+$
 
-where (n_j) is an observed simulator operation count and (c_j) is a declared timing parameter.
+where $n_j$ is an observed simulator operation count and $c_j$ is a declared timing parameter.
 
 These cycles are modeled architectural values, not physical-GPU measurements.
 

@@ -7,6 +7,8 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include <unordered_set>
+#include <sstream>
 
 namespace twrf {
 
@@ -42,6 +44,62 @@ public:
     [[nodiscard]] VersionNumber current_output_version() const noexcept { return current_output_version_; }
     [[nodiscard]] uint64_t total_executions() const noexcept { return total_executions_; }
     [[nodiscard]] uint64_t total_skips() const noexcept { return total_skips_; }
+
+    // Opt-in dependency auditing. Kernels call observe_resource() whenever
+    // they consume a mutable VersionedResource.
+    void enable_dependency_audit(bool enabled = true) noexcept {
+        dependency_audit_enabled_ = enabled;
+    }
+
+    [[nodiscard]] bool dependency_audit_enabled() const noexcept {
+        return dependency_audit_enabled_;
+    }
+
+    void observe_resource(ResourceId id) {
+        if (dependency_audit_enabled_) {
+            observed_resource_reads_.insert(id);
+        }
+    }
+
+    [[nodiscard]] const std::unordered_set<ResourceId>& observed_resource_reads() const noexcept {
+        return observed_resource_reads_;
+    }
+
+    [[nodiscard]] bool dependency_audit_passes() const noexcept {
+        for (ResourceId observed : observed_resource_reads_) {
+            bool declared = false;
+            for (const auto& binding : resource_bindings_) {
+                if (binding.resource_id == observed) {
+                    declared = true;
+                    break;
+                }
+            }
+            if (!declared) return false;
+        }
+        return true;
+    }
+
+    [[nodiscard]] std::string dependency_audit_report() const {
+        std::ostringstream out;
+        out << "TWR " << id_ << " dependency audit: ";
+        if (dependency_audit_passes()) {
+            out << "PASS";
+            return out.str();
+        }
+        out << "FAIL; undeclared resources:";
+        for (ResourceId observed : observed_resource_reads_) {
+            bool declared = false;
+            for (const auto& binding : resource_bindings_) {
+                if (binding.resource_id == observed) {
+                    declared = true;
+                    break;
+                }
+            }
+            if (!declared) out << " " << observed;
+        }
+        return out.str();
+    }
+
 
     [[nodiscard]] const std::vector<ResourceBinding>& resource_bindings() const noexcept { return resource_bindings_; }
     [[nodiscard]] const std::vector<UpstreamBinding>& upstream_producers() const noexcept { return upstream_producers_; }
@@ -113,9 +171,14 @@ public:
         if (!kernel_) return false;
         set_executing();
         total_executions_++;
+        observed_resource_reads_.clear();
 
         bool ok = kernel_(*this, state_store, inputs);
         if (ok) {
+            if (dependency_audit_enabled_ && !dependency_audit_passes()) {
+                mark_failed(ExecutionReason::InputVersionChanged);
+                return false;
+            }
             current_output_version_++;
             // Record versions only after successful computation and State Store commit.
             for (size_t i = 0; i < resource_bindings_.size() && i < inputs.size(); ++i) {
@@ -154,6 +217,9 @@ private:
     std::vector<TWRId> downstream_consumers_;
 
     KernelCallback kernel_;
+
+    bool dependency_audit_enabled_{false};
+    std::unordered_set<ResourceId> observed_resource_reads_;
 };
 
 } // namespace twrf

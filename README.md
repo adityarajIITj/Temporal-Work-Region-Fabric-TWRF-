@@ -160,7 +160,7 @@ ctest --test-dir build --output-on-failure
 python python/analysis/plot_break_even.py
 \`\`\`
 
-The demo writes machine-readable experimental output under results/.
+The demo writes machine-readable experimental output and sensitivity analysis under results/.
 
 ## Repository structure
 

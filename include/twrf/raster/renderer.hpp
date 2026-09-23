@@ -33,6 +33,10 @@ struct RenderResult {
     uint64_t mutated_resources{0};
     std::vector<bool> executed_tiles;
     uint64_t dirty_twr_count{0};
+    uint64_t state_store_reads{0};
+    uint64_t state_store_writes{0};
+    uint64_t state_store_read_bytes{0};
+    uint64_t state_store_write_bytes{0};
 };
 
 class TWRFRenderer {
@@ -49,6 +53,7 @@ public:
     [[nodiscard]] const ExecutionTrace& trace() const noexcept { return trace_; }
     [[nodiscard]] const ExecutionTrace& software_trace() const noexcept { return software_trace_; }
     [[nodiscard]] const MetricsCollector& software_metrics() const noexcept { return software_metrics_; }
+    [[nodiscard]] const LogicalStateStore& software_state_store() const noexcept { return software_state_store_; }
     [[nodiscard]] const MetricsCollector& metrics() const noexcept { return metrics_; }
     [[nodiscard]] const TWRGraph& graph() const noexcept { return *graph_; }
     [[nodiscard]] TWRGraph& graph() noexcept { return *graph_; }
@@ -247,6 +252,7 @@ public:
             if (twr->status() == TWRStatus::Dirty) frame_dirty++;
         }
         size_t trace_start = trace_.entries().size();
+        const auto store_before = state_store_.metrics();
 
         scheduler_.run_frame(*graph_, state_store_, trace_, metrics_);
 
@@ -282,7 +288,11 @@ public:
             framebuffer_,
             frame_mutated,
             std::move(executed_tiles),
-            frame_dirty
+            frame_dirty,
+            state_store_.metrics().total_reads - store_before.total_reads,
+            state_store_.metrics().total_writes - store_before.total_writes,
+            state_store_.metrics().total_read_bytes - store_before.total_read_bytes,
+            state_store_.metrics().total_write_bytes - store_before.total_write_bytes
         };
     }
 
@@ -298,6 +308,7 @@ public:
             if (twr->status() == TWRStatus::Dirty) frame_dirty++;
         }
         size_t trace_start = software_trace_.entries().size();
+        const auto store_before = software_state_store_.metrics();
 
         software_scheduler_.run_frame(*graph_, software_state_store_,
                                        software_trace_, software_metrics_);
@@ -337,7 +348,11 @@ public:
             framebuffer_,
             frame_mutated,
             std::move(executed_tiles),
-            frame_dirty
+            frame_dirty,
+            software_state_store_.metrics().total_reads - store_before.total_reads,
+            software_state_store_.metrics().total_writes - store_before.total_writes,
+            software_state_store_.metrics().total_read_bytes - store_before.total_read_bytes,
+            software_state_store_.metrics().total_write_bytes - store_before.total_write_bytes
         };
     }
 

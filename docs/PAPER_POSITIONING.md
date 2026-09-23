@@ -106,13 +106,13 @@ These are simulator-derived results, not physical GPU measurements.
 
 ## Research conclusion
 
-The current evidence supports TWRF as a coherent architecture and experimental framework, but it does not support a claim of demonstrated performance superiority under the default timing parameters.
+The current evidence supports TWRF as a coherent architecture and experimental framework. Under the declared timing model, it establishes a cost advantage over the executable software incremental Baseline C across the tested raster matrix and sensitivity range, but not over the temporal-cache abstraction or non-static full-recompute baseline. These are derived model results, not physical hardware performance measurements.
 
 The strongest paper framing is therefore:
 
 **TWRF is a persistent spatial execution architecture whose value is a measurable cost-boundary question.**
 
-The sensitivity campaign is implemented as a 54-setting grid. Its purpose is boundary characterization rather than single-point tuning; numerical sensitivity findings should be quoted only from the generated sensitivity artifact.
+The sensitivity campaign is implemented as a 54-setting grid. It tests robustness of the TWRF cost model over declared region-size, control-plane, and State Store assumptions. It is not an unrestricted global optimization or proof of universal superiority.
 
 ## Threats to validity
 

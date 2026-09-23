@@ -114,11 +114,11 @@ under at least:
 The experiment separately reports:
 
 [
-p_o=rac{mutated objects}{objects},
+p_o=\frac{mutated objects}{objects},
 quad
-p_r=rac{dirty TWRs}{TWRs},
+p_r=\frac{dirty TWRs}{TWRs},
 quad
-p_e=rac{executed TWRs}{TWRs}.
+p_e=\frac{executed TWRs}{TWRs}.
 ]
 
 The simple analytical break-even relation is expressed using (p_e), not (p_o):
@@ -130,7 +130,7 @@ C_{TWRF}=C_t+p_eC_r
 and:
 
 [
-p_e<1-rac{C_t}{C_r}.
+p_e<1-\frac{C_t}{C_r}.
 ]
 
 ## Gate 7 — Baseline comparison

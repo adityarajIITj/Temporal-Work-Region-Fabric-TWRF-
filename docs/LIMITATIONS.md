@@ -1,71 +1,204 @@
-# TWRF Architectural Limitations & Known Failure Regimes
+# TWRF Limitations, Threats to Validity, and Required Interpretations
 
-This document transparently records the architectural boundaries, dominant overheads, and losing regimes of the **Temporal Work Region Fabric (TWRF)** virtual GPU architecture, grounded in experimental measurements from Sub-Plan 3 and Sub-Plan 4.
+TWRF is a research architecture simulator. This document separates implemented behavior, modeled behavior, and assumptions that still require external validation.
 
----
+## 1. No physical-GPU performance claim
 
-## 1. The Break-Even Boundary: $p^* \approx 13\%$
+The simulator produces measured simulator operation counts and derived cycle estimates. It does not measure an NVIDIA, AMD, Apple, Intel, ARM, PowerVR, or other physical GPU.
 
-In accordance with the corrected break-even equation:
-$$p < 1 - \frac{C_t}{C_r}$$
+Consequently:
 
-Temporal reuse is beneficial **only** when scene volatility $p$ remains below the critical threshold $p^*$. 
+- modeled "cycles" are not hardware benchmark results;
+- a modeled speedup is not an FPS or energy measurement;
+- FPGA figures are estimates until synthesized and measured.
 
-Under default architectural parameters (64 tiles of $16 \times 16$ pixels on a $128 \times 128$ frame buffer):
-- **Winning Regime ($p \le 10\%$)**: TWRF delivers up to **1.83x cycle reduction** (8,716.8 vs. 15,984.0 cycles) on static and slow-moving scenes.
-- **Break-Even Crossover ($p^* \approx 13\%$)**: Beyond 13% changed regions, tracking overhead $C_t$ negates any computation savings from temporal reuse.
-- **Losing Regime ($p \ge 25\%$)**: TWRF consumes strictly more cycles than conventional full recomputation:
-  - At $p = 25\%$: $+27.4\%$ cycle penalty.
-  - At $p = 50\%$: $+43.4\%$ cycle penalty.
-  - At $p = 75\%$: $+96.2\%$ cycle penalty.
-  - At $p = 100\%$ (Worst-case): **$+176.4\%$ cycle penalty** (44,182.4 vs. 15,984.0 cycles).
+## 2. Incremental benefit is workload-dependent
 
----
+The basic single-region model is:
 
-## 2. Dominant Overhead Components ($C_t$)
+[
+C_{TWRF}=C_t+p_eC_r
+]
 
-Experimental profiling reveals three primary contributors to tracking overhead:
+versus:
 
-| Overhead Component | Measured Cycles (p=0.0) | Measured Cycles (p=1.0) | Mechanism |
-| :--- | :---: | :---: | :--- |
-| **Change Detection ($C_{\text{change\_detect}}$)** | 5,440.0 | 15,680.0 | Version comparison fan-out ($N_{\text{tiles}} \times N_{\text{inputs}}$) plus bounding box overlap tests for mutated resources. |
-| **State Store Read ($C_{\text{state\_store}}$)** | 3,276.8 | 3,276.8 | On-chip SRAM bandwidth required to read persistent tile states for final frame composition. |
-| **Scheduler Queue ($C_{\text{schedule}}$)** | 0.0 | 1,920.0 | Priority queue push, topological depth tie-breaking, and pop operations. |
-| **Interconnect Hops ($C_{\text{interconnect}}$)** | 0.0 | 576.0 | Logical 2D NoC routing between tile execution units and central state memory. |
+[
+C_{full}=C_r
+]
 
-### Key Architectural Bottleneck: Input Version Fan-Out
-Each tile TWR tracks dependencies on scene camera, textures, and geometry resources. Even with clean tiles, evaluating version numbers across 64 tiles $\times$ 17 resources incurs $1,088$ comparisons. As scene complexity scales to thousands of objects, naive per-tile version iteration becomes prohibitive without hierarchical spatial BVH culling.
+so the simplified threshold is:
 
----
+[
+p_e < 1-rac{C_t}{C_r}.
+]
 
-## 3. Pathological Workload Regimes
+This is an analytical condition, not a universal empirical threshold.
 
-TWRF is provably suboptimal under the following workload characteristics:
+The actual implementation has additional terms for State Store traffic, scene memory, interconnect movement, dependency management, and region granularity. The full experiment therefore reports measured (p_o), (p_r), and (p_e) separately.
 
-### 1. Rapid Global Camera Movement / Fast Pan
-- When the camera translates or rotates significantly between frames, virtually all screen tiles undergo projected coordinate shifts.
-- Every tile's input version changes, triggering conservative invalidation across the entire frame.
-- **Result**: 100% of tiles re-execute ($p = 1.0$), paying full recompute work $C_r$ **plus** the complete tracking overhead $C_t$.
+## 3. Object mutation is not region mutation
 
-### 2. Spatially Dispersed High-Frequency Dynamics
-- Workloads such as rain particles, blowing snow, dense foliage flutter, or full-screen noisy post-processing.
-- Although the volume of changed geometry may be small, it touches almost every screen tile.
-- While clustered motion ($p=0.25$) confines dirty tiles to a localized subset, dispersed motion with the identical change fraction dirties up to 2x more tiles, drastically shifting the break-even threshold downwards.
+The workload generator's input parameter controls the fraction of objects intentionally mutated:
 
-### 3. Divergent Secondary Ray Distributions
-- Primary rays and shadow rays exhibit high spatial coherence and benefit cleanly from bounded batching.
-- In contrast, diffuse interreflection or glossy indirect rays scatter arbitrarily across the scene.
-- A single distant moving object can invalidate a large fraction of ray batches, leading to high invalidation fan-out and low reuse.
+[
+p_o=rac{mutated objects}{objects}.
+]
 
-### 4. Low Arithmetic Intensity (Shallow Shaders)
-- When region recompute cost $C_r$ is very small (e.g. flat unshaded quads with 2 triangles), $C_t / C_r$ is large, driving $1 - C_t / C_r$ close to zero or negative.
-- TWRF requires computationally dense workloads (heavy procedural shading, complex geometry, multi-bounce shadow testing, neural reconstruction) for temporal reuse to justify its tracking cost.
+That is not the same quantity as the fraction of dirty regions:
 
----
+[
+p_r=rac{dirty TWRs}{TWRs}
+]
 
-## 4. Architectural Mitigation & Fallback Policy
+or the executed fraction:
 
-To ensure robustness, the TWRF architecture mandates:
-1. **Dynamic Fallback Mode**: When the measured change rate exceeds $p^* \approx 13\%$ over a sliding window of frames, the hardware scheduler disables tracking checks and transitions to unconditioned full recompute mode.
-2. **Hierarchical Spatial Bounding**: Resource bindings must be pruned against a coarse hierarchical bounding volume hierarchy (BVH) before tile-level version checks to prevent $O(N_{\text{tiles}} \times N_{\text{objects}})$ tracking overhead.
-3. **Bounded State Store Spilling**: If active state exceeds on-chip SRAM capacity, low-priority clean tiles are evicted to DRAM, incurring documented DRAM transfer latency rather than causing buffer overflow.
+[
+p_e=rac{executed TWRs}{TWRs}.
+]
+
+The experiment output records all three. Claims about the volatility of the execution fabric should use (p_e) or (p_r), not silently reinterpret (p_o).
+
+## 4. Conservative invalidation can create false positives
+
+Raster TWRs currently bind broad resource sets and use conservative old/new screen-bound unions. This is designed to protect correctness rather than minimize invalidation.
+
+Therefore the architecture may re-execute regions whose final pixels did not actually change:
+
+[
+FPI>0
+]
+
+is expected in some workloads.
+
+The research target is:
+
+[
+min FPI quad 	ext{subject to} quad FNI=0.
+]
+
+A future optimized implementation should investigate hierarchical spatial indexing, finer resource-to-region mappings, and dependency-specific invalidation.
+
+## 5. Dependency auditing is explicit, not automatic program analysis
+
+The implemented dependency audit checks the resources and producer outputs that a workload explicitly reports through:
+
+- observe_resource()
+- observe_upstream_producer()
+
+It is therefore a runtime contract checker, not a compiler or CPU/MMU mechanism that can transparently intercept every C++ load.
+
+Hidden mutable state accessed through arbitrary captured objects can escape the audit unless the kernel explicitly reports it.
+
+This limitation must remain explicit in the thesis.
+
+## 6. B3 is an executable semantic baseline, but its timing is modeled
+
+Baseline C now has a real software incremental scheduler:
+
+- explicit resource-version scanning;
+- explicit producer-version scanning;
+- explicit dirty propagation;
+- software ready-set management;
+- the same TWR kernels and persistent state semantics as TWRF.
+
+The comparison still uses a parameterized software timing model. The model assigns costs to measured B3 operations; it is not a wall-clock benchmark of a production incremental rendering engine.
+
+## 7. CPU/GPU partitioning is abstracted
+
+The simulator abstracts application-side mutation events and the hardware/software boundary.
+
+It does not yet model:
+
+- kernel launch latency from a real driver;
+- PCIe or CXL transfer costs;
+- actual GPU firmware scheduling;
+- real cache coherence protocols;
+- page tables or virtual-memory faults;
+- multi-GPU synchronization;
+- operating-system preemption.
+
+These are outside the present research scope but matter to a physical implementation.
+
+## 8. Ray workload scope
+
+The ray example is intentionally small. It uses bounded primary-ray batches and shadow visibility rather than a complete path-tracing implementation.
+
+A previous semantic hazard was identified and corrected: moving the camera now regenerates derived primary rays before the ray batches are reused.
+
+The model still does not cover the full dependency complexity of multi-bounce global illumination, reservoir-based sampling, or stochastic ray histories.
+
+## 9. Neural workload scope
+
+The neural example uses a deterministic small MLP. It is a workload representative, not a claim that TWRF implements a production neural renderer.
+
+Persistent temporal state is modeled through the previous neural output stored in the State Store.
+
+## 10. Region granularity trade-off
+
+Smaller TWRs improve spatial selectivity but increase:
+
+- metadata storage;
+- version-check fan-out;
+- queue pressure;
+- dependency bookkeeping;
+- State Store metadata and access overhead.
+
+Larger regions reduce management cost but increase false-positive invalidation.
+
+Therefore there is an architecture-dependent optimum region size rather than a universally optimal tile size.
+
+## 11. State Store pressure
+
+The current State Store supports configurable capacity limits and accounts for rejected writes. A physical architecture would need an explicit policy for:
+
+- replacement;
+- spilling;
+- prioritization;
+- recomputation versus reload;
+- bandwidth contention.
+
+Until such a policy is implemented and measured, claims about very large persistent working sets remain architectural hypotheses.
+
+## 12. Heterogeneous DAG scope
+
+The heterogeneous pipeline validates the common TWR contract across raster, ray, and neural stages. It does not establish the scalability of one shared scheduler to a production-sized GPU dependency graph.
+
+The current DAG is intentionally small so the causal structure is inspectable.
+
+## 13. Determinism scope
+
+The simulator defines deterministic TWR selection and uses deterministic kernels. This supports reproducible simulation traces.
+
+It does not prove bitwise determinism for arbitrary future hardware implementations with relaxed floating-point modes, parallel reductions, or vendor-specific math units.
+
+## 14. Prior-art threat
+
+Incremental computation has a deep prior-art literature, including self-adjusting computation, named incremental computation, persistent render-graph resources, and incremental path-traced rendering.
+
+TWRF's research claim is therefore intentionally narrower: it evaluates a GPU-oriented architectural combination of persistent spatial work identity, state/output, validity, dependencies, and scheduling.
+
+No individual mechanism should be presented as unprecedented.
+
+## 15. Final interpretation rule
+
+A convincing TWRF result requires the following order of evidence:
+
+[
+Semantic correctness
+ightarrow
+Dependency soundness
+ightarrow
+Oracle equivalence
+ightarrow
+B3 parity
+ightarrow
+Measured simulator accounting
+ightarrow
+Parameterized timing
+ightarrow
+Sensitivity
+ightarrow
+Hardware study.
+]
+
+Performance conclusions that bypass these gates should not be treated as final research evidence.

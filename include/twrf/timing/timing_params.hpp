@@ -21,6 +21,7 @@ struct TimingParameters {
     // hardware TWRF scoreboard/ready queue.
     double sw_cycles_version_check{12.0};
     double sw_cycles_queue_operation{35.0};
+    double sw_cycles_bounding_check{18.0};
     double sw_cycles_dependency_notify{18.0};
     double sw_cycles_state_store_read_byte{0.12};
     double sw_cycles_state_store_write_byte{0.12};

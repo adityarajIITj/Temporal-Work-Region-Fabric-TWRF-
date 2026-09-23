@@ -26,11 +26,12 @@ jobs:
         run: ./build/twrf_demo > /tmp/twrf_demo.log
 
       - name: Validate JSON
-        run: python3 - <<'PY'
-import json
-with open("results/phase3_sweeps.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
-assert len(data["change_rate_sweep"]) == 7
-assert len(data["locality_sweep"]) == 2
-print("JSON validation passed")
-PY
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("results/phase3_sweeps.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+          assert len(data["change_rate_sweep"]) == 7
+          assert len(data["locality_sweep"]) == 2
+          print("JSON validation passed")
+          PY

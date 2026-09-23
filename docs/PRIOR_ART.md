@@ -82,7 +82,17 @@ Implication:
 
 TWRF differs in research scope by asking whether the persistent region itself should be represented as a hardware-level computational object with state, validity, dependency edges, and a common scheduler across raster, ray, and neural workloads.
 
-## 6. What the simulator actually evaluates
+## 6. GPU dynamic scheduling and render-graph systems
+
+Direct3D 12 Work Graphs are an important architectural neighbor. Microsoft describes Work Graphs as a GPU-autonomy mechanism in which GPU shader threads can create additional work while the system manages scheduling and memory for data flowing between tasks. This establishes that GPU-side dynamic work creation and dependency-aware scheduling are already practical API-level concepts.
+
+The distinction for TWRF is the temporal object being managed. Work Graphs primarily address GPU-generated work and producer/consumer execution within a graph. TWRF instead keeps a spatial work object's identity, output/state, validity information, and execution lifecycle across frame boundaries. The research question is therefore not whether GPU-managed graph scheduling exists, but whether persistent spatial work identity across frames is a useful architectural primitive in addition to existing graph/work-generation mechanisms.
+
+AMD's Render Pipeline Shaders SDK provides another adjacent reference point: it exposes render-graph node dependencies and persistent/temporal resource classes and uses graph information to schedule barriers, memory, and workload efficiently. This establishes that persistence and temporal resource access already exist in graphics render-graph systems. TWRF's proposed distinction is that persistence is attached to the work object itself, not only to the resource it reads or writes.
+
+Incremental path-traced rendering is also direct adjacent prior art. Ulschmid et al. describe adaptive priority-based incremental re-rendering that identifies and schedules affected image regions rather than immediately rebuilding the complete image. TWRF therefore does not claim region-aware incremental rendering as a first invention; its architectural question is whether persistent region work objects can provide a common hardware execution abstraction across raster, ray, and neural workloads.
+
+## 7. What the simulator actually evaluates
 
 The simulator is designed to separate the semantic question from the architectural-cost question.
 
@@ -103,7 +113,7 @@ C_{TWRF} quad	ext{vs.}quad C_{B3}
 
 rather than comparing TWRF only to an intentionally non-incremental baseline.
 
-## 7. Adversarial equivalence test for competing mechanisms
+## 8. Adversarial equivalence test for competing mechanisms
 
 A mechanism should be regarded as semantically TWR-equivalent when it can represent and maintain all of the following:
 
@@ -119,7 +129,7 @@ A mechanism should be regarded as semantically TWR-equivalent when it can repres
 
 This is intentionally a **semantic equivalence test**, not a claim that previous systems literally implement TWRF.
 
-## 8. Defensible novelty statement
+## 9. Defensible novelty statement
 
 A research-paper-safe formulation is:
 
@@ -127,7 +137,7 @@ A research-paper-safe formulation is:
 
 The phrase "investigates" is deliberate. A publication claim of novelty should be made only after a formal literature review beyond this repository-level survey.
 
-## 9. Key references
+## 10. Key references
 
 1. Umut A. Acar, *Self-Adjusting Computation*, Carnegie Mellon University PhD thesis, 2005.
 2. Umut A. Acar et al., *A Library for Self-Adjusting Computation*, 2006.
@@ -139,7 +149,7 @@ The phrase "investigates" is deliberate. A publication claim of novelty should b
 8. Annalena Ulschmid, Bernhard Kerbl, Katharina Krösl, Michael Wimmer, *Real-Time Editing of Path-Traced Scenes with Prioritized Re-Rendering*, 2024.
 9. Annalena Ulschmid et al., *Automated Prioritization for Context-Aware Re-rendering in Editing*, 2025.
 
-## 10. Interpretation rule
+## 11. Interpretation rule
 
 The project must never use "novel", "first", "unprecedented", or similar absolute language for individual mechanisms such as temporal reuse, memoization, dependency tracking, persistent resources, or region-based incremental rendering.
 

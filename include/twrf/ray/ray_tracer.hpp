@@ -62,13 +62,13 @@ public:
     [[nodiscard]] const ExecutionTrace& trace() const noexcept { return trace_; }
     [[nodiscard]] const MetricsCollector& metrics() const noexcept { return metrics_; }
 
-    void initialize_default_batches() {
+    void regenerate_primary_rays() {
         batches_.resize(batch_count_);
         for (size_t b = 0; b < batch_count_; ++b) {
             batches_[b].batch_id = static_cast<uint32_t>(b);
+            batches_[b].rays.clear();
             batches_[b].rays.reserve(rays_per_batch_);
 
-            // Generate a bundle of primary rays through a grid
             float u_base = static_cast<float>(b % 4) * 0.25f;
             float v_base = static_cast<float>(b / 4) * 0.25f;
 
@@ -83,6 +83,10 @@ public:
                 batches_[b].rays.emplace_back(scene_.camera_pos, dir);
             }
         }
+    }
+
+    void initialize_default_batches() {
+        regenerate_primary_rays();
 
         // Register versioned resources in TWRGraph
         auto& cam_res = graph_->add_resource(RAY_CAMERA_RESOURCE_ID, "RayCamera");
@@ -179,6 +183,7 @@ public:
 
     void notify_camera_moved(const Vec3& new_pos) {
         scene_.camera_pos = new_pos;
+        regenerate_primary_rays();
         auto* res = graph_->get_resource(RAY_CAMERA_RESOURCE_ID);
         if (res) {
             res->set_value(new_pos);

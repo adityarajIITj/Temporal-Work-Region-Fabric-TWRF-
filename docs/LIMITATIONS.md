@@ -29,7 +29,7 @@ C_{full}=C_r
 so the simplified threshold is:
 
 [
-p_e < 1-rac{C_t}{C_r}.
+p_e < 1-\frac{C_t}{C_r}.
 ]
 
 This is an analytical condition, not a universal empirical threshold.
@@ -41,19 +41,19 @@ The actual implementation has additional terms for State Store traffic, scene me
 The workload generator's input parameter controls the fraction of objects intentionally mutated:
 
 [
-p_o=rac{mutated objects}{objects}.
+p_o=\frac{mutated objects}{objects}.
 ]
 
 That is not the same quantity as the fraction of dirty regions:
 
 [
-p_r=rac{dirty TWRs}{TWRs}
+p_r=\frac{dirty TWRs}{TWRs}
 ]
 
 or the executed fraction:
 
 [
-p_e=rac{executed TWRs}{TWRs}.
+p_e=\frac{executed TWRs}{TWRs}.
 ]
 
 The experiment output records all three. Claims about the volatility of the execution fabric should use (p_e) or (p_r), not silently reinterpret (p_o).

@@ -118,7 +118,9 @@ public:
                     gb.albedo = Vec3(0.1f, 0.1f, 0.15f);
                 }
 
-                store.write_output(self.id(), &gb, sizeof(GBufferTile), self.current_output_version() + 1);
+                if (!store.write_output(self.id(), &gb, sizeof(GBufferTile), self.current_output_version() + 1)) return false;
+
+
                 return true;
             });
 
@@ -155,7 +157,9 @@ public:
                     ray_out.occlusion = 0.0f;
                 }
 
-                store.write_output(self.id(), &ray_out, sizeof(RayTileOutput), self.current_output_version() + 1);
+                if (!store.write_output(self.id(), &ray_out, sizeof(RayTileOutput), self.current_output_version() + 1)) return false;
+
+
                 return true;
             });
 
@@ -196,7 +200,9 @@ public:
                 final_out.final_color = Vec3(out_vec[0], out_vec[1], out_vec[2]);
                 final_out.temporal_confidence = std::clamp(out_vec[3], 0.0f, 1.0f);
 
-                store.write_output(self.id(), &final_out, sizeof(ShadedTileOutput), self.current_output_version() + 1);
+                if (!store.write_output(self.id(), &final_out, sizeof(ShadedTileOutput), self.current_output_version() + 1)) return false;
+
+
                 return true;
             });
         }

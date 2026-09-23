@@ -48,7 +48,7 @@ jobs:
           with open("results/twrf_sensitivity.json", "r", encoding="utf-8") as f:
               sensitivity = json.load(f)
           grid = sensitivity["sensitivity"]
-          assert len(grid) == 54
+          assert len(grid) == 135
           for point in grid:
               assert point["cases"] == 14
               assert 0.0 <= point["twrf_vs_c_win_fraction"] <= 1.0

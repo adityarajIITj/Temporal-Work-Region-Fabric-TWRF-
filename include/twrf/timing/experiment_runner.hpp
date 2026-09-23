@@ -22,6 +22,7 @@ struct SweepDataPoint {
     CycleAccounting twrf_cycles;
     CycleAccounting baseline_a_cycles;
     CycleAccounting baseline_b_cycles;
+    CycleAccounting baseline_c_cycles;
 
     [[nodiscard]] bool twrf_wins_vs_a() const noexcept {
         return twrf_cycles.total_cycles() < baseline_a_cycles.total_cycles();
@@ -29,6 +30,10 @@ struct SweepDataPoint {
 
     [[nodiscard]] bool twrf_wins_vs_b() const noexcept {
         return twrf_cycles.total_cycles() < baseline_b_cycles.total_cycles();
+    }
+
+    [[nodiscard]] bool twrf_wins_vs_c() const noexcept {
+        return twrf_cycles.total_cycles() < baseline_c_cycles.total_cycles();
     }
 };
 
@@ -65,6 +70,8 @@ public:
             pt.twrf_cycles = ArchitecturalModels::evaluate_twrf(renderer, res);
             pt.baseline_a_cycles = ArchitecturalModels::evaluate_baseline_a_full_recompute(renderer);
             pt.baseline_b_cycles = ArchitecturalModels::evaluate_baseline_b_temporal_cache(renderer, res);
+            pt.baseline_c_cycles = ArchitecturalModels::evaluate_baseline_c_software_incremental(renderer, res);
+            pt.baseline_c_cycles = ArchitecturalModels::evaluate_baseline_c_software_incremental(renderer, res);
 
             results.push_back(pt);
         }
@@ -156,7 +163,7 @@ public:
                 << "      \"skip_ratio\": " << pt.skip_ratio << ",\n"
                 << "      \"twrf_total_cycles\": " << pt.twrf_cycles.total_cycles() << ",\n"
                 << "      \"baseline_a_total_cycles\": " << pt.baseline_a_cycles.total_cycles() << ",\n"
-                << "      \"baseline_b_total_cycles\": " << pt.baseline_b_cycles.total_cycles() << "\n"
+                << "      \"baseline_b_total_cycles\": " << pt.baseline_b_cycles.total_cycles() << ",\n                << "      \"baseline_c_total_cycles\": " << pt.baseline_c_cycles.total_cycles() << "\n"
                 << "    }" << (i + 1 < locality_data.size() ? "," : "") << "\n";
         }
         ofs << "  ]\n";

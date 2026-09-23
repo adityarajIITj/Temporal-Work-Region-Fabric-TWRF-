@@ -19,7 +19,7 @@ struct SweepDataPoint {
     double executed_region_fraction{0.0}; // p_e
     uint64_t tiles_executed{0};
     uint64_t tiles_skipped{0};
-    skip_ratio{0.0};
+    double skip_ratio{0.0};
 
     CycleAccounting twrf_cycles;
     CycleAccounting baseline_a_cycles;

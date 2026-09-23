@@ -57,8 +57,8 @@ public:
     }
 
     bool write_output(TWRId id, const void* src, size_t size_bytes, VersionNumber version, Timestamp step = 0) {
-        auto& slot = slots_[id];
-        size_t old_size = slot.payload.size();
+        auto it = slots_.find(id);
+        size_t old_size = (it != slots_.end()) ? it->second.payload.size() : 0;
 
         if (metrics_.capacity_limit_bytes > 0) {
             size_t projected = metrics_.current_allocated_bytes - old_size + size_bytes;
@@ -75,6 +75,7 @@ public:
         metrics_.total_writes++;
         metrics_.total_write_bytes += size_bytes;
 
+        auto& slot = slots_[id];
         slot.payload.resize(size_bytes);
         if (size_bytes > 0 && src != nullptr) {
             std::memcpy(slot.payload.data(), src, size_bytes);

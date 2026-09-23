@@ -66,6 +66,7 @@ add_twrf_test(test_break_even_sanity tests/test_break_even_sanity.cpp)
 add_twrf_test(test_worst_case tests/test_worst_case.cpp)
 add_twrf_test(test_sweep_reproducibility tests/test_sweep_reproducibility.cpp)
 add_twrf_test(test_b3_parity tests/test_b3_parity.cpp)
+add_twrf_test(test_oracle_matrix tests/test_oracle_matrix.cpp)
 
 # Phase 4 (Sub-Plan 4): Ray + Neural Workloads, Cross-Workload DAG & Native API
 add_twrf_test(test_ray_batch_reuse tests/test_ray_batch_reuse.cpp)

@@ -20,7 +20,8 @@ enum class TWRStatus {
     IdleClean,
     Dirty,
     Ready,
-    Executing
+    Executing,
+    Failed
 };
 
 enum class ExecutionReason {
@@ -38,6 +39,7 @@ inline std::string_view to_string(TWRStatus status) {
         case TWRStatus::Dirty:     return "Dirty";
         case TWRStatus::Ready:     return "Ready";
         case TWRStatus::Executing: return "Executing";
+        case TWRStatus::Failed:    return "Failed";
     }
     return "Unknown";
 }

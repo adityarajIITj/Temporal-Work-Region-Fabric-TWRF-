@@ -100,7 +100,7 @@ The default derived timing model currently yields:
 - TWRF < executable software incremental Baseline C at every tested matrix point;
 - TWRF/B3 derived cost ratio between 1.634 and 2.400;
 - no additional modeled reduction is required to cross below B3 at the tested points; the default model already places TWRF below B3.
-- the software experiment runner now includes a 54-setting sensitivity grid over tile size, control-plane cost, and State Store latency.
+- the software experiment runner now includes a 135-setting sensitivity grid over tile size, control-plane cost, and State Store latency.
 
 These are simulator-derived results, not physical GPU measurements.
 
@@ -112,7 +112,7 @@ The strongest paper framing is therefore:
 
 **TWRF is a persistent spatial execution architecture whose value is a measurable cost-boundary question.**
 
-The sensitivity campaign is implemented as a 54-setting grid. It tests robustness of the TWRF cost model over declared region-size, control-plane, and State Store assumptions. It is not an unrestricted global optimization or proof of universal superiority.
+The sensitivity campaign is implemented as a 135-setting grid. It tests robustness of the TWRF cost model over declared region-size, control-plane, and State Store assumptions. It is not an unrestricted global optimization or proof of universal superiority.
 
 ## Threats to validity
 

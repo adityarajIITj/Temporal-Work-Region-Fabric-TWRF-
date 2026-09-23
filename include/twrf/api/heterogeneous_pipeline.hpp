@@ -136,6 +136,7 @@ public:
                                                  const std::vector<const VersionedResource*>&) -> bool {
                 self.observe_resource(HET_LIGHT_RES_ID);
                 self.observe_resource(HET_GEOMETRY_RES_ID);
+                self.observe_upstream_producer(raster_id);
                 // Read G-Buffer from producer Stage 1
                 size_t sz = 0;
                 VersionNumber ver = 0;
@@ -176,6 +177,8 @@ public:
             twr_neural.set_kernel([this, raster_id, ray_id](TemporalWorkRegion& self, LogicalStateStore& store,
                                                            const std::vector<const VersionedResource*>&) -> bool {
                 self.observe_resource(HET_WEIGHTS_RES_ID);
+                self.observe_upstream_producer(raster_id);
+                self.observe_upstream_producer(ray_id);
                 // Read G-Buffer and Ray outputs
                 size_t sz_gb = 0, sz_ray = 0, sz_prev = 0;
                 VersionNumber v_gb = 0, v_ray = 0, v_prev = 0;

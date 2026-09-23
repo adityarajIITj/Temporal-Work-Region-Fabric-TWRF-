@@ -140,8 +140,8 @@ public:
         // Execute kernel
         bool success = twr->execute(state_store, inputs, step_counter_);
 
-        if (twr->dependency_audit_enabled()) {
-            if (twr->dependency_audit_passes()) {
+        if (twr->dependency_audit_was_evaluated()) {
+            if (twr->dependency_audit_passed_last_execution()) {
                 metrics.dependency_audit_passes++;
             } else {
                 metrics.dependency_audit_failures++;

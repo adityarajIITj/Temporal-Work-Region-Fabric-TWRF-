@@ -13,9 +13,9 @@ The branch contains the semantic-hardening, comparative-baseline, reproducibilit
 **Latest completed verification before this final documentation change:**
 
 - Workflow: TWRF Validation
-- Run: #76
-- Run ID: 35883747861
-- Verified commit: `b0be8a479531b3d2920060e04553cc847e9bfb73`
+- Run: #86
+- Run ID: 35884975879
+- Verified commit: `5fe96d53d802f9450803b30537bfde767c5fef16`
 - Build: success
 - Tests: 35/35 passed
 - Smoke demo: success
@@ -73,8 +73,8 @@ Against Baseline A, TWRF is below the modeled full-recompute cost only in the co
 The implemented sensitivity grid contains:
 
 - 3 tile sizes: 8, 16, 32;
-- 6 TWRF hardware control-plane multipliers: 0.25, 0.50, 0.75, 1.00, 1.50, 2.00;
-- 3 TWRF State Store latency multipliers: 0.50, 1.00, 2.00;
+- 9 TWRF hardware control-plane multipliers: 0.25, 0.50, 0.75, 1.00, 1.50, 2.00, 4.00, 8.00, 16.00;
+- 5 TWRF State Store latency multipliers: 0.50, 1.00, 2.00, 4.00, 8.00;
 - 135 parameter settings total;
 - 14 matrix cases evaluated per setting.
 

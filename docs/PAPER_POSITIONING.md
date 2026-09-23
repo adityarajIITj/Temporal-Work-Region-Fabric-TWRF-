@@ -87,7 +87,7 @@ semantic lifecycle correctness
 The final validated raster campaign has:
 
 - 14 matrix cases;
-- 34 automated CTest tests in the current CI run;
+- 35 registered CTest tests;
 - 14/14 TWRF-B3 execution-set parity;
 - 14/14 TWRF-B3 bitwise output parity;
 - 14/14 matrix dependency-audit success;
@@ -100,6 +100,7 @@ The default derived timing model currently yields:
 - TWRF > executable software incremental Baseline C at every tested matrix point;
 - TWRF/B3 derived cost ratio between 1.634 and 2.400;
 - approximately 38.8%–58.3% reduction in modeled TWRF total cost would be required to cross below B3 at the tested points.
+- the software experiment runner now includes a 54-setting sensitivity grid over tile size, control-plane cost, and State Store latency.
 
 These are simulator-derived results, not physical GPU measurements.
 
@@ -111,7 +112,7 @@ The strongest paper framing is therefore:
 
 **TWRF is a persistent spatial execution architecture whose value is a measurable cost-boundary question.**
 
-The next scientific step is a controlled sensitivity analysis that varies hardware management costs and State Store/region parameters without tuning a single result point for a favorable outcome.
+The sensitivity campaign is implemented as a 54-setting grid. Its purpose is boundary characterization rather than single-point tuning; numerical sensitivity findings should be quoted only from the generated sensitivity artifact.
 
 ## Threats to validity
 

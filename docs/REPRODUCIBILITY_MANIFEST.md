@@ -110,8 +110,8 @@ These cycles are modeled architectural values, not physical-GPU measurements.
 The final runner generates 135 settings:
 
 - tile sizes: 8, 16, 32;
-- hardware control-plane multiplier: 0.25, 0.50, 0.75, 1.00, 1.50, 2.00;
-- State Store latency multiplier: 0.50, 1.00, 2.00.
+- hardware control-plane multiplier: 0.25, 0.50, 0.75, 1.00, 1.50, 2.00, 4.00, 8.00, 16.00;
+- State Store latency multiplier: 0.50, 1.00, 2.00, 4.00, 8.00.
 
 Each setting evaluates the full 14-case raster matrix.
 

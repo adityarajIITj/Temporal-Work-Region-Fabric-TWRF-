@@ -42,6 +42,8 @@ add_twrf_test(test_scheduler_determinism tests/test_scheduler_determinism.cpp)
 add_twrf_test(test_cost_model tests/test_cost_model.cpp)
 add_twrf_test(test_state_store tests/test_state_store.cpp)
 add_twrf_test(test_multi_frame tests/test_multi_frame.cpp)
+add_twrf_test(test_failure_propagation tests/test_failure_propagation.cpp)
+add_twrf_test(test_state_commit_failure tests/test_state_commit_failure.cpp)
 
 # Phase 2 (Sub-Plan 2): Functional Rasterizer & Reuse Tests
 add_twrf_test(test_raster_reuse tests/test_raster_reuse.cpp)

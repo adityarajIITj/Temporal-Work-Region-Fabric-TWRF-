@@ -242,15 +242,15 @@ public:
         current_frame_++;
         uint64_t exec_before = metrics_.total_twr_executions;
         uint64_t skip_before = metrics_.total_twr_skips;
+        uint64_t frame_dirty = 0;
+        for (const auto& [id, twr] : graph_->twrs()) {
+            if (twr->status() == TWRStatus::Dirty) frame_dirty++;
+        }
         size_t trace_start = trace_.entries().size();
 
         scheduler_.run_frame(*graph_, state_store_, trace_, metrics_);
 
         size_t trace_end = trace_.entries().size();
-        uint64_t frame_dirty = 0;
-        for (const auto& [id, twr] : graph_->twrs()) {
-            if (twr->status() == TWRStatus::Dirty) frame_dirty++;
-        }
         uint64_t frame_execs = metrics_.total_twr_executions - exec_before;
         uint64_t frame_skips = metrics_.total_twr_skips - skip_before;
         double skip_ratio = (frame_execs + frame_skips > 0)
@@ -293,16 +293,16 @@ public:
         current_frame_++;
         uint64_t exec_before = software_metrics_.total_twr_executions;
         uint64_t skip_before = software_metrics_.total_twr_skips;
+        uint64_t frame_dirty = 0;
+        for (const auto& [id, twr] : graph_->twrs()) {
+            if (twr->status() == TWRStatus::Dirty) frame_dirty++;
+        }
         size_t trace_start = software_trace_.entries().size();
 
         software_scheduler_.run_frame(*graph_, software_state_store_,
                                        software_trace_, software_metrics_);
 
         size_t trace_end = software_trace_.entries().size();
-        uint64_t frame_dirty = 0;
-        for (const auto& [id, twr] : graph_->twrs()) {
-            if (twr->status() == TWRStatus::Dirty) frame_dirty++;
-        }
         uint64_t frame_execs =
             software_metrics_.total_twr_executions - exec_before;
         uint64_t frame_skips =

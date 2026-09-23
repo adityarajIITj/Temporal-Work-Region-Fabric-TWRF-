@@ -33,5 +33,23 @@ jobs:
               data = json.load(f)
           assert len(data["change_rate_sweep"]) == 7
           assert len(data["locality_sweep"]) == 2
-          print("JSON validation passed")
+          assert len(data["full_matrix"]) == 14
+          for point in data["full_matrix"]:
+              assert point["execution_set_parity"] is True
+              assert point["output_parity"] is True
+              assert point["twrf_dependency_audit_failures"] == 0
+              assert point["baseline_c_dependency_audit_failures"] == 0
+              for key in ("object_change_fraction", "dirty_region_fraction", "executed_region_fraction"):
+                  assert 0.0 <= point[key] <= 1.0
+          print("JSON research-gate validation passed")
           PY
+
+
+      - name: Upload experimental artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: twrf-research-results
+          path: |
+            results/phase3_sweeps.json
+            results/twrf_architectural_comparison.png
+          if-no-files-found: warn

@@ -18,19 +18,15 @@ The literature already contains strong mechanisms for:
 
 The research contribution under evaluation is a particular **GPU architectural organization**:
 
-[
-oxed{
-Persistent Spatial Work Identity
+**Persistent Spatial Work Identity**
 +
-Persistent State
+**Persistent State**
 +
-Version/Validity Tracking
+**Version/Validity Tracking**
 +
-Explicit Dependencies
+**Explicit Dependency Graph**
 +
-Hardware-Oriented Scheduling
-$
-]
+**Hardware-Oriented Scheduling**
 
 The relevant question is whether that combination, exposed as a first-class execution object in a GPU-like fabric, has useful architectural properties and under what workload/overhead conditions.
 

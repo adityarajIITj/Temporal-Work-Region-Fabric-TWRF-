@@ -36,7 +36,7 @@ The repository currently contains:
 - derived-ray refresh after camera mutation;
 - heterogeneous Raster -> Ray, Raster -> Neural, and Ray -> Neural dependencies;
 - parameterized A/B/C/TWRF timing models;
-- a 54-setting timing sensitivity grid over region size, control-plane cost, and State Store latency;
+- a 135-setting timing sensitivity grid over region size, control-plane cost, and State Store latency;
 - machine-readable sensitivity export and CI validation;
 - measured control-plane operation counters;
 - 7 x 2 mutation/locality experimental matrix generation;
@@ -122,7 +122,7 @@ The defensible claim is that TWRF investigates the particular GPU-oriented combi
 
 The validated 14-case raster matrix has full execution-set parity, full output parity, and zero dependency-audit failures. Under the current default timing parameters, the derived model places TWRF below Baseline C in all 14 cases, while the temporal-cache model remains lower than TWRF across the tested matrix. TWRF is below the full-recompute model only for the completely static case. See docs/RESULTS.md for the complete matrix and interpretation.
 
-The successful CI run 76 built the project, passed all 35 registered tests, executed the demo, and passed machine-readable JSON validation. Run 76 (commit 6ce5e9628a1453e0b9f483e3f5e7b0ecc9ed71cf) is the latest verified CI run for the frozen software state: build success, 35/35 tests passed, demo success, and JSON validation success. Its CI artifact contains the 14-case matrix and 54-setting sensitivity output.
+The successful CI run 76 built the project, passed all 35 registered tests, executed the demo, and passed machine-readable JSON validation. Run 76 (commit 6ce5e9628a1453e0b9f483e3f5e7b0ecc9ed71cf) is the latest verified CI run for the frozen software state: build success, 35/35 tests passed, demo success, and JSON validation success. Its CI artifact contains the 14-case matrix and 135-setting sensitivity output.
 
 ## Remaining external validation
 

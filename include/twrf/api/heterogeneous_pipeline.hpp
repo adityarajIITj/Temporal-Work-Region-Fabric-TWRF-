@@ -216,6 +216,7 @@ public:
             });
         }
 
+        for (const auto& [id, twr] : graph_->twrs()) twr->enable_dependency_audit(true);
         graph_->validate_and_compute_depths();
     }
 

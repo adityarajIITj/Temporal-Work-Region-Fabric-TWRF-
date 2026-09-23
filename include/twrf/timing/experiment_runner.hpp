@@ -71,7 +71,6 @@ public:
             pt.baseline_a_cycles = ArchitecturalModels::evaluate_baseline_a_full_recompute(renderer);
             pt.baseline_b_cycles = ArchitecturalModels::evaluate_baseline_b_temporal_cache(renderer, res);
             pt.baseline_c_cycles = ArchitecturalModels::evaluate_baseline_c_software_incremental(renderer, res);
-            pt.baseline_c_cycles = ArchitecturalModels::evaluate_baseline_c_software_incremental(renderer, res);
 
             results.push_back(pt);
         }
@@ -107,6 +106,7 @@ public:
             pt.twrf_cycles = ArchitecturalModels::evaluate_twrf(renderer, res);
             pt.baseline_a_cycles = ArchitecturalModels::evaluate_baseline_a_full_recompute(renderer);
             pt.baseline_b_cycles = ArchitecturalModels::evaluate_baseline_b_temporal_cache(renderer, res);
+            pt.baseline_c_cycles = ArchitecturalModels::evaluate_baseline_c_software_incremental(renderer, res);
 
             results.push_back(pt);
         }

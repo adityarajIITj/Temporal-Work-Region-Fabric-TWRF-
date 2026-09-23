@@ -136,7 +136,7 @@ The results are **derived architectural simulation results**. They must not be c
 
 ## Sensitivity campaign
 
-The final software experiment runner now provides a reproducible 54-setting sensitivity grid spanning three tile sizes, six hardware control-plane multipliers, and three State Store latency multipliers. Each setting evaluates the complete 14-case clustered/dispersed mutation matrix.
+The final software experiment runner now provides a reproducible 135-setting sensitivity grid spanning three tile sizes, six hardware control-plane multipliers, and three State Store latency multipliers. Each setting evaluates the complete 14-case clustered/dispersed mutation matrix.
 
 The generated artifact is `results/twrf_sensitivity.json`. The grid is intended to characterize the boundary
 [

@@ -142,9 +142,10 @@ public:
             }
 
             // Write full output [output_t, hidden_t] to State Store
-            store.write_output(self.id(), full_output.data.data(),
+            if (!store.write_output(self.id(), full_output.data.data(),
                                full_output.size() * sizeof(float),
-                               self.current_output_version() + 1);
+                               self.current_output_version() + 1)) return false;
+
             return true;
         });
 

@@ -211,12 +211,14 @@ public:
         dependency_audit_evaluated_ = false;
         dependency_audit_passed_last_execution_ = false;
 
+        const auto output_snapshot = state_store.snapshot_output(id_);
         bool ok = kernel_(*this, state_store, inputs);
         if (ok) {
             if (dependency_audit_enabled_) {
                 dependency_audit_evaluated_ = true;
                 dependency_audit_passed_last_execution_ = dependency_audit_passes();
                 if (!dependency_audit_passed_last_execution_) {
+                    state_store.restore_output(id_, output_snapshot);
                     mark_failed(ExecutionReason::InputVersionChanged);
                     return false;
                 }
@@ -234,6 +236,7 @@ public:
             mark_clean();
         } else {
             // Failed execution is never valid and cannot release consumers.
+            state_store.restore_output(id_, output_snapshot);
             mark_failed(ExecutionReason::None);
         }
         return ok;

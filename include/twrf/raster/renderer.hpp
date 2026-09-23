@@ -80,11 +80,7 @@ public:
 
         // 1. Register Camera resource
         auto& cam_res = graph_->add_resource(CAMERA_RESOURCE_ID, "Camera");
-        self.observe_resource(CAMERA_RESOURCE_ID);
-                for (const auto& obj : scene_.objects) self.observe_resource(OBJECT_RESOURCE_BASE + obj.id);
-                for (size_t t = 0; t < scene_.textures.size(); ++t) self.observe_resource(TEXTURE_RESOURCE_BASE + static_cast<ResourceId>(t));
-
-                Mat4 vp = scene_.camera.view_proj_matrix();
+        Mat4 vp = scene_.camera.view_proj_matrix();
         cam_res.set_value(vp);
 
         // 2. Register Object transform resources
@@ -133,6 +129,15 @@ public:
 
                 TileRasterizer::clear_tile(tile_color.data(), tile_depth.data(), tile_size,
                                            ColorRGBA{20, 20, 30, 255}, 1.0f);
+
+                self.observe_resource(CAMERA_RESOURCE_ID);
+                for (const auto& obj : scene_.objects) {
+                    self.observe_resource(OBJECT_RESOURCE_BASE + obj.id);
+                }
+                for (size_t t = 0; t < scene_.textures.size(); ++t) {
+                    self.observe_resource(
+                        TEXTURE_RESOURCE_BASE + static_cast<ResourceId>(t));
+                }
 
                 Mat4 vp = scene_.camera.view_proj_matrix();
 

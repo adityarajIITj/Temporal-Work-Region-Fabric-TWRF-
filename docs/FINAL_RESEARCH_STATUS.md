@@ -116,6 +116,10 @@ The research does not claim individual novelty for incremental computation, depe
 
 The defensible claim is that TWRF investigates the particular GPU-oriented combination and its architectural cost/benefit boundary.
 
+## Current experimental finding
+
+The validated 14-case raster matrix has full execution-set parity, full output parity, and zero dependency-audit failures. Under the current default timing parameters, the derived model does not show TWRF beating Baseline C or the temporal-cache model across the tested mutation/locality cases. TWRF is below the full-recompute model only for the completely static case. See docs/RESULTS.md for the complete matrix and interpretation.
+
 ## Remaining external validation
 
 The following are outside the current software-simulator evidence boundary:

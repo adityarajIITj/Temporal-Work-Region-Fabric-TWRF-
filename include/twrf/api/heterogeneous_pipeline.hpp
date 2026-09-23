@@ -134,6 +134,7 @@ public:
 
             twr_ray.set_kernel([this, raster_id](TemporalWorkRegion& self, LogicalStateStore& store,
                                                  const std::vector<const VersionedResource*>&) -> bool {
+                self.observe_resource(HET_CAMERA_RES_ID);
                 self.observe_resource(HET_LIGHT_RES_ID);
                 self.observe_resource(HET_GEOMETRY_RES_ID);
                 self.observe_upstream_producer(raster_id);

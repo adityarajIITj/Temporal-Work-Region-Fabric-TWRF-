@@ -128,6 +128,7 @@ public:
 
             // STAGE 2: Ray Shadow/Occlusion TWR (Downstream of Raster)
             auto& twr_ray = graph_->add_twr(ray_id, "RayOcclusion_" + std::to_string(i));
+            graph_->bind_resource(ray_id, HET_CAMERA_RES_ID);
             graph_->bind_resource(ray_id, HET_LIGHT_RES_ID);
             graph_->bind_resource(ray_id, HET_GEOMETRY_RES_ID);
             graph_->connect_dependency(raster_id, ray_id); // Raster -> Ray dependency

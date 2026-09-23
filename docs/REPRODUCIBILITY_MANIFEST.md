@@ -47,13 +47,13 @@ Locality:
 
 The experiment reports three distinct fractions:
 
-[
-p_o=rac{mutated objects}{objects},
-qquad
-p_r=rac{dirty TWRs}{TWRs},
-qquad
-p_e=rac{executed TWRs}{TWRs}.
-]
+$$
+p_o = \frac{mutated\ objects}{objects},
+\qquad
+p_r = \frac{dirty\ TWRs}{TWRs},
+\qquad
+p_e = \frac{executed\ TWRs}{TWRs}.
+$$
 
 Timing comparisons use (p_e), not the requested mutation parameter.
 

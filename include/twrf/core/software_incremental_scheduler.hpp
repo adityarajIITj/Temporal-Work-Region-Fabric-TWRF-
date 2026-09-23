@@ -49,15 +49,19 @@ public:
             for (const auto& binding : twr->resource_bindings()) {
                 const auto* res = graph.get_resource(binding.resource_id);
                 if (!res) continue;
-                if (res->version() != binding.recorded_version &&
-                    twr->region().overlaps(res->bounds())) {
-                    twr->mark_dirty(ExecutionReason::InputVersionChanged);
-                    break;
+                metrics.resource_version_checks++;
+                if (res->version() != binding.recorded_version) {
+                    metrics.bounding_checks++;
+                    if (twr->region().overlaps(res->bounds())) {
+                        twr->mark_dirty(ExecutionReason::InputVersionChanged);
+                        break;
+                    }
                 }
             }
 
             if (twr->status() != TWRStatus::Dirty) {
                 for (const auto& up : twr->upstream_producers()) {
+                    metrics.producer_version_checks++;
                     const VersionNumber producer_version =
                         state_store.get_output_version(up.producer_id);
                     if (producer_version != up.recorded_version) {
@@ -86,6 +90,7 @@ public:
             for (const TWRId consumer_id : producer->downstream_consumers()) {
                 auto* consumer = graph.get_twr(consumer_id);
                 if (!consumer || consumer->status() == TWRStatus::Dirty) continue;
+                metrics.dirty_propagations++;
                 consumer->mark_dirty(ExecutionReason::ProducerOutputChanged);
                 dirty_queue.push(consumer_id);
             }
@@ -119,6 +124,7 @@ public:
 
             if (pending == 0) {
                 ready_set_.insert(twr->id());
+                metrics.ready_queue_pushes++;
             }
         }
     }
@@ -129,6 +135,7 @@ public:
 
         const TWRId selected = select_next_ready(graph);
         ready_set_.erase(selected);
+        metrics.ready_queue_pops++;
 
         auto* twr = graph.get_twr(selected);
         if (!twr) return false;
@@ -174,9 +181,11 @@ public:
                 if (consumer->pending_dependencies() == 0 &&
                     consumer->status() == TWRStatus::Dirty) {
                     ready_set_.insert(consumer_id);
+                    metrics.ready_queue_pushes++;
                 }
             }
         } else {
+            metrics.failed_executions++;
             twr->mark_dirty(ExecutionReason::None);
         }
 

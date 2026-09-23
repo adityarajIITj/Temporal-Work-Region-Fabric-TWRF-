@@ -139,7 +139,9 @@ public:
                 std::memcpy(payload.data(), tile_color.data(), pixel_count * sizeof(ColorRGBA));
                 std::memcpy(payload.data() + pixel_count * sizeof(ColorRGBA), tile_depth.data(), pixel_count * sizeof(float));
 
-                store.write_output(self.id(), payload.data(), payload.size(), self.current_output_version() + 1, 1);
+                if (!store.write_output(self.id(), payload.data(), payload.size(), self.current_output_version() + 1, 1)) return false;
+
+
                 return true;
             });
         }

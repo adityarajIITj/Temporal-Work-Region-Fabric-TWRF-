@@ -82,6 +82,13 @@ public:
         execution_reason_ = ExecutionReason::None;
     }
 
+    void mark_failed(ExecutionReason reason = ExecutionReason::None) noexcept {
+        status_ = TWRStatus::Failed;
+        if (reason != ExecutionReason::None) {
+            execution_reason_ = reason;
+        }
+    }
+
     void record_skip() noexcept {
         total_skips_++;
     }
@@ -110,7 +117,7 @@ public:
         bool ok = kernel_(*this, state_store, inputs);
         if (ok) {
             current_output_version_++;
-            // Update recorded versions to match latest inputs
+            // Record versions only after successful computation and State Store commit.
             for (size_t i = 0; i < resource_bindings_.size() && i < inputs.size(); ++i) {
                 if (inputs[i]) {
                     resource_bindings_[i].recorded_version = inputs[i]->version();
@@ -119,8 +126,11 @@ public:
             for (auto& up : upstream_producers_) {
                 up.recorded_version = state_store.get_output_version(up.producer_id);
             }
+            mark_clean();
+        } else {
+            // Failed execution is never valid and cannot release consumers.
+            mark_failed(ExecutionReason::None);
         }
-        mark_clean();
         return ok;
     }
 

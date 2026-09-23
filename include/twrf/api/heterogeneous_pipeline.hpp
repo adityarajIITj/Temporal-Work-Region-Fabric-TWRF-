@@ -118,7 +118,9 @@ public:
                     gb.albedo = Vec3(0.1f, 0.1f, 0.15f);
                 }
 
-                store.write_output(self.id(), &gb, sizeof(GBufferTile), self.current_output_version() + 1);
+                if (!store.write_output(self.id(), &gb, sizeof(GBufferTile), self.current_output_version() + 1)) return false;
+
+
                 return true;
             });
 
@@ -155,7 +157,9 @@ public:
                     ray_out.occlusion = 0.0f;
                 }
 
-                store.write_output(self.id(), &ray_out, sizeof(RayTileOutput), self.current_output_version() + 1);
+                if (!store.write_output(self.id(), &ray_out, sizeof(RayTileOutput), self.current_output_version() + 1)) return false;
+
+
                 return true;
             });
 
@@ -163,6 +167,7 @@ public:
             auto& twr_neural = graph_->add_twr(neural_id, "NeuralDenoise_" + std::to_string(i));
             graph_->bind_resource(neural_id, HET_WEIGHTS_RES_ID);
             graph_->connect_dependency(ray_id, neural_id); // Ray -> Neural dependency
+            graph_->connect_dependency(raster_id, neural_id); // Neural directly consumes Raster G-Buffer
 
             twr_neural.set_kernel([this, raster_id, ray_id](TemporalWorkRegion& self, LogicalStateStore& store,
                                                            const std::vector<const VersionedResource*>&) -> bool {
@@ -196,7 +201,9 @@ public:
                 final_out.final_color = Vec3(out_vec[0], out_vec[1], out_vec[2]);
                 final_out.temporal_confidence = std::clamp(out_vec[3], 0.0f, 1.0f);
 
-                store.write_output(self.id(), &final_out, sizeof(ShadedTileOutput), self.current_output_version() + 1);
+                if (!store.write_output(self.id(), &final_out, sizeof(ShadedTileOutput), self.current_output_version() + 1)) return false;
+
+
                 return true;
             });
         }

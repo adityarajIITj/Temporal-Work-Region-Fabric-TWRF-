@@ -144,6 +144,8 @@ public:
             trace.record_execution(step_counter_, twr->id(), twr->name(),
                                    reason, twr->current_output_version(), in_vers);
 
+            // Only a successful producer completion may release downstream
+            // dependency readiness. A failed producer remains invalid.
             // Notify downstream consumers
             for (TWRId consumer_id : twr->downstream_consumers()) {
                 metrics.dependency_traversals++;
@@ -155,6 +157,11 @@ public:
                     enqueue_ready(*consumer);
                 }
             }
+        } else {
+            // Retry failed work on a subsequent frame, but do not release any
+            // downstream dependency. This prevents consumers from observing
+            // stale producer output.
+            twr->mark_dirty(ExecutionReason::None);
         }
 
         return true;

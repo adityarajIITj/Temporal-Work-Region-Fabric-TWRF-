@@ -38,7 +38,7 @@ public:
                                         const TimingParameters& params = TimingParameters::default_config()) {
         CycleAccounting acc;
         const auto& cfg = renderer.config();
-        const auto& sc = renderer.scene();
+        const int total_tiles = cfg.total_tiles();
 
         // Control-plane costs come directly from measured simulator counters.
         acc.change_detect_cycles +=
@@ -120,20 +120,16 @@ public:
 
     // Model 3: Baseline C (Software Incremental Runtime)
     //
-    // This is intentionally a management-cost model, not yet a second
-    // renderer implementation. It uses the same measured execution set and
-    // workload event trace as TWRF, then assigns software-side bookkeeping
-    // costs to equivalent operations. It is therefore suitable for sensitivity
-    // analysis, but must not be presented as measured software-runtime speedup.
+    // The runtime is executable; the cycle conversion remains a derived model.
+    // It uses the same semantic workload and mutation trace as TWRF while
+    // assigning software-side management costs to its measured operations.
     static CycleAccounting evaluate_baseline_c_software_incremental(
             const raster::TWRFRenderer& renderer,
             const raster::RenderResult& render_res,
             const TimingParameters& params = TimingParameters::default_config()) {
         CycleAccounting acc;
         const auto& cfg = renderer.config();
-        const auto& sc = renderer.scene();
         const int total_tiles = cfg.total_tiles();
-        const int tile_pixels = cfg.tile_size * cfg.tile_size;
 
         // Use measured B3 control-plane operation counts.
         acc.change_detect_cycles +=
@@ -142,7 +138,7 @@ public:
             params.sw_cycles_version_check;
         acc.change_detect_cycles +=
             renderer.software_metrics().bounding_checks *
-            params.sw_cycles_version_check;
+            params.sw_cycles_bounding_check;
 
         acc.scheduler_cycles +=
             (renderer.software_metrics().ready_queue_pushes +

@@ -1,6 +1,6 @@
-# TWRF FPGA & RTL Synthesizability Feasibility Memo
+# TWRF FPGA / RTL Feasibility Memo
 
-This document defines the minimum synthesizable hardware subset, architectural block mapping, and resource estimations for an eventual FPGA/RTL prototype of the **Temporal Work Region Fabric (TWRF)** architecture.
+This document defines a proposed minimum hardware subset and an architectural mapping for a future FPGA/RTL prototype of TWRF. It is a feasibility study, not a synthesis report.
 
 ---
 
@@ -65,9 +65,11 @@ An initial prototype does not require full 4K rasterization or deep neural netwo
 
 ---
 
-## 3. FPGA Resource Estimation (AMD Xilinx UltraScale+ ZCU102 / ZU9EG)
+## 3. Illustrative Resource Estimate (Not Synthesized)
 
-Target Prototype Parameters:
+The numerical values below are design estimates retained for feasibility discussion. No RTL synthesis, place-and-route, timing closure, or hardware execution has been performed in this repository.
+
+Illustrative prototype parameters:
 - Operating Frequency Target: **200 MHz**
 - Screen Configuration: $128 \times 128$ resolution, $16 \times 16$ tile granularity (64 total tiles).
 - State Store: 1 MB On-Chip Memory (512 KB color/depth + 256 KB ray buffers + 256 KB neural weights/states).

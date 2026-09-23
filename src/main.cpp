@@ -43,7 +43,7 @@ int main() {
     std::cout << "Localized mutation: executed " << r2.tiles_executed
               << ", skipped " << r2.tiles_skipped
               << ", p_e=" << std::fixed << std::setprecision(3)
-              << r2.executed_region_fraction << "\n\n";
+              << (static_cast<double>(r2.tiles_executed) / cfg.total_tiles()) << "\n\n";
 
     std::cout
         << "[DEMO 2] Heterogeneous Raster -> Ray -> Neural DAG\n"

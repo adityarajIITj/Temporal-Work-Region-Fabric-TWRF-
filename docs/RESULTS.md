@@ -139,3 +139,14 @@ No timing parameter should be tuned merely to produce a favorable result; the co
 ## Claim boundary
 
 The results are **derived architectural simulation results**. They must not be converted into claims such as “X FPS faster”, “Y% GPU speedup”, or “lower power” without physical hardware measurements.
+
+## Sensitivity campaign
+
+The final software experiment runner now provides a reproducible 54-setting sensitivity grid spanning three tile sizes, six hardware control-plane multipliers, and three State Store latency multipliers. Each setting evaluates the complete 14-case clustered/dispersed mutation matrix.
+
+The generated artifact is `results/twrf_sensitivity.json`. The grid is intended to characterize the boundary
+[
+C_{TWRF}<C_{B3}
+]
+rather than to optimize a single point. Numerical sensitivity values should be reported only after a completed build/run has generated the artifact.
+

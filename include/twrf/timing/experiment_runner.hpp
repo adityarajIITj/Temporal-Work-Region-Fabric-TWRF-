@@ -143,6 +143,8 @@ private:
         // Identical cold-start/warmup.
         twrf_renderer.render_frame_incremental();
         b3_renderer.render_frame_software_incremental();
+        twrf_renderer.reset_measurement_metrics();
+        b3_renderer.reset_measurement_metrics();
 
         // Identical external event.
         raster::WorkloadGenerator::apply_change_step(

@@ -59,7 +59,6 @@ public:
             params.cycles_dependency_notify;
 
         // 4. Compute cost (only for executed tiles)
-        int tile_pixels = cfg.tile_size * cfg.tile_size;
         for (int i = 0; i < total_tiles; ++i) {
             bool executed = (i < static_cast<int>(render_res.executed_tiles.size()))
                                 ? render_res.executed_tiles[i]

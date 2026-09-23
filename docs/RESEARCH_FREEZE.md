@@ -1,0 +1,123 @@
+# TWRF Research Freeze Record
+
+## Frozen software line
+
+**Branch:** `research/p0-semantic-hardening`
+
+**Freeze commit:** `ad86ad2fdfc1ea01f82ad94a2bab5b3001c06dce`
+
+The branch contains the semantic-hardening, comparative-baseline, reproducibility, and sensitivity-analysis work required for the current software research study.
+
+## Verified CI
+
+**Latest completed verification before this final documentation change:**
+
+- Workflow: TWRF Validation
+- Run: #76
+- Run ID: 35883747861
+- Verified commit: `6ce5e9628a1453e0b9f483e3f5e7b0ecc9ed71cf`
+- Build: success
+- Tests: 35/35 passed
+- Smoke demo: success
+- JSON validation: success
+- Research artifacts: generated and uploaded.
+
+Documentation-only commits after Run #76 do not alter the experiment implementation. A final CI run is still required for the exact freeze commit so that the documentation and code are verified together.
+
+## Final experiment
+
+The standard raster campaign contains 14 matrix cases:
+
+- 7 requested object-mutation settings;
+- 2 locality patterns;
+- 64 persistent raster TWRs;
+- 16 benchmark objects.
+
+The experiment separates:
+
+$$
+p_o = rac{mutated\ objects}{objects},
+\qquad
+p_r = rac{dirty\ TWRs}{TWRs},
+\qquad
+p_e = rac{executed\ TWRs}{TWRs}.
+$$
+
+Timing comparisons use $p_e$.
+
+## Baseline set
+
+- Baseline A: full recomputation.
+- Baseline B: temporal-cache abstraction.
+- Baseline C: executable software incremental scheduler.
+- TWRF: hardware-oriented persistent-TWR scheduler.
+
+The TWRF/B3 comparison is the principal architectural comparison because both models implement selective computation rather than comparing selective execution against unconditional recomputation alone.
+
+## Verified result snapshot
+
+From the successful CI artifact:
+
+- 14/14 TWRF-B3 execution-set parity;
+- 14/14 TWRF-B3 output parity;
+- 0 TWRF dependency-audit failures;
+- 0 Baseline C dependency-audit failures;
+- 14/14 full-recompute oracle parity in the dedicated matrix test;
+- B3/TWRF derived-cost ratio: 1.6338133119 to 2.4000000000 across the 14 standard cases;
+- TWRF is therefore approximately 38.8%–58.3% lower in modeled total cost than B3 across that matrix.
+
+Against Baseline A, TWRF is below the modeled full-recompute cost only in the completely static case at the default parameters. Against Baseline B, the temporal-cache abstraction is lower than TWRF throughout the standard default matrix.
+
+## Sensitivity snapshot
+
+The implemented sensitivity grid contains:
+
+- 3 tile sizes: 8, 16, 32;
+- 6 TWRF hardware control-plane multipliers: 0.25, 0.50, 0.75, 1.00, 1.50, 2.00;
+- 3 TWRF State Store latency multipliers: 0.50, 1.00, 2.00;
+- 54 parameter settings total;
+- 14 matrix cases evaluated per setting.
+
+All 54 settings in the successful artifact place TWRF below Baseline C for all 14 matrix cases. Across the grid, the minimum B3/TWRF ratio is 1.0259823577 and the maximum is 7.9190150479.
+
+This is a robustness result over the declared tested range. It is not a proof of an unrestricted global cost boundary because software-baseline parameters, dependency depth, State Store capacity pressure, and larger workload families were not exhaustively swept.
+
+## Evidence boundary
+
+### Measured simulator evidence
+
+- execution counts and skips;
+- version checks;
+- bounding checks;
+- dependency traversal;
+- queue/ready-set activity;
+- State Store operations and bytes;
+- execution traces;
+- parity results;
+- audit outcomes.
+
+### Derived model evidence
+
+- cycle estimates obtained by multiplying measured operation counts by explicit timing parameters;
+- break-even and sensitivity calculations.
+
+### Estimated evidence
+
+- FPGA/RTL resource and timing projections that have not been synthesized or measured.
+
+### Unsupported by this study
+
+- physical GPU speedup;
+- FPS claims;
+- physical power or energy savings;
+- FPGA timing closure;
+- silicon area;
+- production-scale path-tracing or neural-rendering performance.
+
+## Publication conclusion
+
+The software study establishes that a persistent spatial TWR abstraction can be implemented with explicit lifecycle, dependency, validity, persistent-state, and scheduling semantics; can be checked against a forced-recompute oracle; and can be compared fairly with an executable software incremental runtime.
+
+Under the declared timing assumptions, the model shows a cost advantage for TWRF over the executable software incremental baseline, while a simpler temporal-cache abstraction remains lower-cost in the tested default matrix and full recomputation remains lower-cost at non-static mutation points. The resulting research claim is therefore a **conditional architectural cost result**, not a universal performance claim.
+
+Any future physical-hardware result should be treated as a separate validation stage rather than retroactively inferred from this software study.

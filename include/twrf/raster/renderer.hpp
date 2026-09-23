@@ -58,6 +58,14 @@ public:
     [[nodiscard]] const TWRGraph& graph() const noexcept { return *graph_; }
     [[nodiscard]] TWRGraph& graph() noexcept { return *graph_; }
 
+    // Reset per-frame measurement counters without clearing persistent TWR state.
+    void reset_measurement_metrics() noexcept {
+        metrics_.reset();
+        software_metrics_.reset();
+        state_store_.reset_metrics();
+        software_state_store_.reset_metrics();
+    }
+
     void initialize() {
         graph_ = std::make_unique<TWRGraph>();
         state_store_ = LogicalStateStore();

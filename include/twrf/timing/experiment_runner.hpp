@@ -2,6 +2,7 @@
 
 #include "twrf/timing/baselines.hpp"
 #include "twrf/raster/workload_generator.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -160,33 +161,28 @@ public:
         if (!ofs) return false;
 
         ofs << std::setprecision(12);
-        ofs << "{
-  "sensitivity": [
-";
+        ofs << "{\n  \"sensitivity\": [\n";
         for (size_t i = 0; i < data.size(); ++i) {
             const auto& point = data[i];
             ofs << "    {"
-                << ""tile_size": " << point.tile_size
-                << ", "hardware_control_multiplier": "
+                << "\"tile_size\": " << point.tile_size
+                << ", \"hardware_control_multiplier\": "
                 << point.hardware_control_multiplier
-                << ", "state_store_latency_multiplier": "
+                << ", \"state_store_latency_multiplier\": "
                 << point.state_store_latency_multiplier
-                << ", "cases": " << point.cases
-                << ", "twrf_wins_vs_a": " << point.twrf_wins_vs_a
-                << ", "twrf_wins_vs_b": " << point.twrf_wins_vs_b
-                << ", "twrf_wins_vs_c": " << point.twrf_wins_vs_c
-                << ", "twrf_vs_c_win_fraction": "
+                << ", \"cases\": " << point.cases
+                << ", \"twrf_wins_vs_a\": " << point.twrf_wins_vs_a
+                << ", \"twrf_wins_vs_b\": " << point.twrf_wins_vs_b
+                << ", \"twrf_wins_vs_c\": " << point.twrf_wins_vs_c
+                << ", \"twrf_vs_c_win_fraction\": "
                 << point.twrf_vs_c_win_fraction
-                << ", "min_twrf_vs_c_ratio": "
+                << ", \"min_twrf_vs_c_ratio\": "
                 << point.min_twrf_vs_c_ratio
-                << ", "max_twrf_vs_c_ratio": "
+                << ", \"max_twrf_vs_c_ratio\": "
                 << point.max_twrf_vs_c_ratio
-                << "}" << (i + 1 < data.size() ? "," : "") << "
-";
+                << "}" << (i + 1 < data.size() ? "," : "") << "\n";
         }
-        ofs << "  ]
-}
-";
+        ofs << "  ]\n}\n";
         return static_cast<bool>(ofs);
     }
 

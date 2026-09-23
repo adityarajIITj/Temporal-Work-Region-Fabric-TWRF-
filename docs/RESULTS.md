@@ -112,29 +112,23 @@ Under the default timing parameters and tested 14-case raster matrix, the eviden
 
 That is a legitimate research result because it identifies the management-cost boundary that a future implementation must overcome.
 
-## Required follow-on sensitivity study
+## Sensitivity scope and remaining extensions
 
-The next research phase should vary:
+The implemented final sensitivity campaign varies:
 
-- version-check latency;
-- bounding-check latency;
-- ready-queue operation latency;
-- dependency-notification latency;
-- State Store latency;
-- region granularity;
-- State Store capacity.
+- version/checking, queue, and dependency-management costs through a common hardware control-plane multiplier;
+- State Store read/write latency through a dedicated multiplier;
+- region granularity through tile sizes 8, 16, and 32.
 
-The objective is to identify the parameter region where:
+The experiment therefore characterizes a controlled slice of the parameter space without tuning a single favorable point.
+
+Further extensions remain possible for future work, including independently varying each control-plane component, explicit State Store capacity pressure, dependency depth, and larger workload families. These are extensions to the frozen software study rather than prerequisites for interpreting the current result.
+
+All sensitivity interpretations must retain:
 
 C_TWRF < C_B3
 
-while retaining:
-
-FNI = 0
-
-and preserving execution/output parity.
-
-No timing parameter should be tuned merely to produce a favorable result; the complete sensitivity surface should be reported.
+only under the declared parameter setting, while preserving dependency-audit, oracle, and TWRF/B3 parity gates.
 
 ## Claim boundary
 

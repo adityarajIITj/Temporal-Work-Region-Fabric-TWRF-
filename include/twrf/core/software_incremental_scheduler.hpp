@@ -10,6 +10,7 @@
 #include <queue>
 #include <unordered_set>
 #include <vector>
+#include <iterator>
 
 namespace twrf {
 

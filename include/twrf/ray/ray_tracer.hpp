@@ -105,6 +105,9 @@ public:
 
             twr.set_kernel([this, b](TemporalWorkRegion& self, LogicalStateStore& store,
                                      const std::vector<const VersionedResource*>&) -> bool {
+                self.observe_resource(RAY_CAMERA_RESOURCE_ID);
+                self.observe_resource(RAY_GEOMETRY_RESOURCE_ID);
+                self.observe_resource(RAY_LIGHT_RESOURCE_ID);
                 const auto& batch = batches_[b];
                 RayBatchPayload payload;
                 payload.batch_id = batch.batch_id;

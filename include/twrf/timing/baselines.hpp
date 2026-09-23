@@ -40,21 +40,23 @@ public:
         const auto& cfg = renderer.config();
         const auto& sc = renderer.scene();
 
-        // 1. Change detection cost (paid by all tiles to check inputs)
-        int total_tiles = cfg.total_tiles();
-        // Version check is evaluated for all bound input resources across all tiles
-        acc.change_detect_cycles += params.cycles_version_check * (1 + sc.objects.size()) * total_tiles;
-        // Bounding check is only performed for mutated resources requiring spatial intersection testing
-        uint64_t checked_mutations = (render_res.mutated_resources > 0)
-                                         ? std::min(render_res.mutated_resources, static_cast<uint64_t>(sc.objects.size()))
-                                         : (render_res.tiles_executed > 0 ? static_cast<uint64_t>(sc.objects.size()) : 0);
-        acc.change_detect_cycles += params.cycles_bounding_check * checked_mutations * total_tiles;
+        // Control-plane costs come directly from measured simulator counters.
+        acc.change_detect_cycles +=
+            (renderer.metrics().resource_version_checks +
+             renderer.metrics().producer_version_checks) *
+            params.cycles_version_check;
+        acc.change_detect_cycles +=
+            renderer.metrics().bounding_checks *
+            params.cycles_bounding_check;
 
-        // 2. Scheduler cost
-        acc.scheduler_cycles += render_res.tiles_executed * params.cycles_queue_operation * 2.0;
+        acc.scheduler_cycles +=
+            (renderer.metrics().ready_queue_pushes +
+             renderer.metrics().ready_queue_pops) *
+            params.cycles_queue_operation;
 
-        // 3. Dependency propagation
-        acc.dependency_cycles += renderer.metrics().dependency_traversals * params.cycles_dependency_notify;
+        acc.dependency_cycles +=
+            renderer.metrics().dependency_traversals *
+            params.cycles_dependency_notify;
 
         // 4. Compute cost (only for executed tiles)
         int tile_pixels = cfg.tile_size * cfg.tile_size;
@@ -68,9 +70,8 @@ public:
                 acc.compute_cycles += w.compute_cycles;
                 acc.scene_memory_cycles += w.memory_cycles;
 
-                // Write output to State Store
-                size_t payload_bytes = tile_pixels * (sizeof(raster::ColorRGBA) + sizeof(float));
-                acc.state_store_cycles += payload_bytes * params.cycles_state_store_write_byte;
+                // State Store traffic is accounted from measured per-frame
+                // bytes below; keep this loop focused on compute and interconnect.
 
                 // Logical NoC interconnect: Manhattan distance to center
                 int tx = i % cfg.tiles_x();
@@ -82,9 +83,14 @@ public:
             }
         }
 
-        // 5. Read state store for display composition (all tiles)
-        size_t display_read_bytes = tile_pixels * sizeof(raster::ColorRGBA);
-        acc.state_store_cycles += total_tiles * display_read_bytes * params.cycles_state_store_read_byte;
+        // Measured State Store traffic includes kernel commits and final
+        // display composition reads for this frame.
+        acc.state_store_cycles +=
+            static_cast<double>(render_res.state_store_read_bytes) *
+            params.cycles_state_store_read_byte;
+        acc.state_store_cycles +=
+            static_cast<double>(render_res.state_store_write_bytes) *
+            params.cycles_state_store_write_byte;
 
         return acc;
     }
@@ -129,15 +135,20 @@ public:
         const int total_tiles = cfg.total_tiles();
         const int tile_pixels = cfg.tile_size * cfg.tile_size;
 
-        // Software scans the same resource bindings to detect version changes.
+        // Use measured B3 control-plane operation counts.
         acc.change_detect_cycles +=
-            params.sw_cycles_version_check * (1 + sc.objects.size()) * total_tiles;
+            (renderer.software_metrics().resource_version_checks +
+             renderer.software_metrics().producer_version_checks) *
+            params.sw_cycles_version_check;
+        acc.change_detect_cycles +=
+            renderer.software_metrics().bounding_checks *
+            params.sw_cycles_version_check;
 
-        // Explicit ready-set bookkeeping.
         acc.scheduler_cycles +=
-            render_res.tiles_executed * params.sw_cycles_queue_operation * 2.0;
+            (renderer.software_metrics().ready_queue_pushes +
+             renderer.software_metrics().ready_queue_pops) *
+            params.sw_cycles_queue_operation;
 
-        // Software dependency traversal/notification.
         acc.dependency_cycles +=
             renderer.software_metrics().dependency_traversals *
             params.sw_cycles_dependency_notify;
@@ -151,19 +162,15 @@ public:
             acc.compute_cycles += w.compute_cycles;
             acc.scene_memory_cycles += w.memory_cycles;
 
-            size_t payload_bytes =
-                static_cast<size_t>(tile_pixels) *
-                (sizeof(raster::ColorRGBA) + sizeof(float));
-            acc.state_store_cycles +=
-                payload_bytes * params.sw_cycles_state_store_write_byte;
         }
 
-        // Persistent software cache/state is still read for display.
-        size_t display_read_bytes =
-            static_cast<size_t>(tile_pixels) * sizeof(raster::ColorRGBA);
+        // Per-frame State Store traffic is measured by the B3 runtime.
         acc.state_store_cycles +=
-            static_cast<double>(total_tiles) * display_read_bytes *
+            static_cast<double>(render_res.state_store_read_bytes) *
             params.sw_cycles_state_store_read_byte;
+        acc.state_store_cycles +=
+            static_cast<double>(render_res.state_store_write_bytes) *
+            params.sw_cycles_state_store_write_byte;
 
         return acc;
     }

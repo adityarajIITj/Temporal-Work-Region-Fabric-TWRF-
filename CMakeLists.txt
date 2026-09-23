@@ -47,6 +47,7 @@ add_twrf_test(test_state_commit_failure tests/test_state_commit_failure.cpp)
 add_twrf_test(test_direct_dependency tests/test_direct_dependency.cpp)
 add_twrf_test(test_dependency_audit tests/test_dependency_audit.cpp)
 add_twrf_test(test_ray_camera_refresh tests/test_ray_camera_refresh.cpp)
+add_twrf_test(test_producer_dependency_audit tests/test_producer_dependency_audit.cpp)
 
 # Phase 2 (Sub-Plan 2): Functional Rasterizer & Reuse Tests
 add_twrf_test(test_raster_reuse tests/test_raster_reuse.cpp)

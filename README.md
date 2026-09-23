@@ -122,6 +122,10 @@ They are **not measurements of a physical GPU**.
 
 FPGA resource figures and RTL mappings in docs/FPGA_FEASIBILITY.md are design estimates, not synthesized silicon measurements.
 
+## Experimental result
+
+The validated 14-case raster matrix currently shows execution/output parity and zero dependency-audit failures, but the default timing parameterization does **not** demonstrate a TWRF cost advantage over the executable software incremental baseline or the temporal-cache baseline. Detailed values and interpretation are in `docs/RESULTS.md`. This is a derived timing-model result, not a physical-GPU benchmark.
+
 ## Validation gates
 
 The project uses the following evidence ladder:

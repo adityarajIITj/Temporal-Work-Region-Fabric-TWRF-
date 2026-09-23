@@ -3,6 +3,7 @@
 #include "twrf/core/types.hpp"
 #include "twrf/core/graph.hpp"
 #include "twrf/core/scheduler.hpp"
+#include "twrf/core/software_incremental_scheduler.hpp"
 #include "twrf/core/state_store.hpp"
 #include "twrf/core/trace.hpp"
 #include "twrf/core/metrics.hpp"
@@ -45,6 +46,8 @@ public:
     [[nodiscard]] const FrameBuffer& framebuffer() const noexcept { return framebuffer_; }
     [[nodiscard]] LogicalStateStore& state_store() noexcept { return state_store_; }
     [[nodiscard]] const ExecutionTrace& trace() const noexcept { return trace_; }
+    [[nodiscard]] const ExecutionTrace& software_trace() const noexcept { return software_trace_; }
+    [[nodiscard]] const MetricsCollector& software_metrics() const noexcept { return software_metrics_; }
     [[nodiscard]] const MetricsCollector& metrics() const noexcept { return metrics_; }
     [[nodiscard]] const TWRGraph& graph() const noexcept { return *graph_; }
     [[nodiscard]] TWRGraph& graph() noexcept { return *graph_; }
@@ -55,6 +58,9 @@ public:
         scheduler_ = TWRScheduler();
         trace_.clear();
         metrics_.reset();
+        software_trace_.clear();
+        software_metrics_.reset();
+        software_scheduler_.reset();
         current_frame_ = 0;
         mutated_resources_this_frame_ = 0;
 
@@ -258,7 +264,57 @@ public:
         }
 
         // Compose final display FrameBuffer from all tile states
-        assemble_framebuffer(framebuffer_);
+        assemble_framebuffer(framebuffer_, state_store_);
+
+        uint64_t frame_mutated = mutated_resources_this_frame_;
+        mutated_resources_this_frame_ = 0;
+
+        return RenderResult{
+            current_frame_,
+            frame_execs,
+            frame_skips,
+            skip_ratio,
+            framebuffer_,
+            frame_mutated,
+            std::move(executed_tiles)
+        };
+    }
+
+    // Baseline C execution path: software-managed incremental scheduling.
+    // Use a renderer instance dedicated to this path; TWRF and B3 have
+    // independent execution state even though they share graph/kernel semantics.
+    RenderResult render_frame_software_incremental() {
+        current_frame_++;
+        uint64_t exec_before = software_metrics_.total_twr_executions;
+        uint64_t skip_before = software_metrics_.total_twr_skips;
+        size_t trace_start = software_trace_.entries().size();
+
+        software_scheduler_.run_frame(*graph_, software_state_store_,
+                                       software_trace_, software_metrics_);
+
+        size_t trace_end = software_trace_.entries().size();
+        uint64_t frame_execs =
+            software_metrics_.total_twr_executions - exec_before;
+        uint64_t frame_skips =
+            software_metrics_.total_twr_skips - skip_before;
+        double skip_ratio =
+            (frame_execs + frame_skips > 0)
+                ? static_cast<double>(frame_skips) /
+                      static_cast<double>(frame_execs + frame_skips)
+                : 0.0;
+
+        std::vector<bool> executed_tiles(config_.total_tiles(), false);
+        for (size_t idx = trace_start; idx < trace_end; ++idx) {
+            const auto& e = software_trace_.entries()[idx];
+            if (e.executed && e.twr_id >= TILE_TWR_BASE) {
+                size_t tile_idx = e.twr_id - TILE_TWR_BASE;
+                if (tile_idx < executed_tiles.size()) {
+                    executed_tiles[tile_idx] = true;
+                }
+            }
+        }
+
+        assemble_framebuffer(framebuffer_, software_state_store_);
 
         uint64_t frame_mutated = mutated_resources_this_frame_;
         mutated_resources_this_frame_ = 0;
@@ -315,7 +371,7 @@ public:
     }
 
 private:
-    void assemble_framebuffer(FrameBuffer& fb) {
+    void assemble_framebuffer(FrameBuffer& fb, const LogicalStateStore& store) {
         int tile_size = config_.tile_size;
         int pixel_count = tile_size * tile_size;
 
@@ -325,7 +381,7 @@ private:
 
             size_t sz = 0;
             VersionNumber ver = 0;
-            const uint8_t* payload = state_store_.read_output(tid, sz, ver);
+            const uint8_t* payload = store.read_output(tid, sz, ver);
 
             if (payload && sz >= pixel_count * sizeof(ColorRGBA)) {
                 const auto* colors = reinterpret_cast<const ColorRGBA*>(payload);
@@ -343,6 +399,12 @@ private:
     TWRScheduler scheduler_;
     ExecutionTrace trace_;
     MetricsCollector metrics_;
+
+    // Independent state for the software-incremental Baseline C path.
+    SoftwareIncrementalScheduler software_scheduler_;
+    LogicalStateStore software_state_store_;
+    ExecutionTrace software_trace_;
+    MetricsCollector software_metrics_;
 
     uint64_t current_frame_{0};
     uint64_t mutated_resources_this_frame_{0};

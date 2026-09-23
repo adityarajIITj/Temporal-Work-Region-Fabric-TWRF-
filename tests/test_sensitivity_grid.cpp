@@ -8,8 +8,8 @@ int main() {
     const auto grid = twrf::timing::ExperimentRunner::run_sensitivity_grid();
 
     // 3 tile sizes x 6 control multipliers x 3 State Store multipliers.
-    TWRF_ASSERT(grid.size() == 54,
-                "Sensitivity grid must contain 54 parameter settings");
+    TWRF_ASSERT(grid.size() == 135,
+                "Sensitivity grid must contain 135 parameter settings");
 
     for (const auto& point : grid) {
         TWRF_ASSERT(point.cases == 14,

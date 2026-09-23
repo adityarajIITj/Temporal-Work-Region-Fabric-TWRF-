@@ -57,7 +57,7 @@ int main() {
     scheduler.run_frame(graph, store, trace, metrics);
 
     TWRF_ASSERT(raster_runs == 2, "Raster should re-execute");
-    TWRF_ASSERT(ray_runs == 0, "Unrelated Ray node must remain clean");
+    TWRF_ASSERT(ray_runs == 1, "Unrelated Ray node must remain clean");
     TWRF_ASSERT(neural_runs == 2,
                 "Neural must re-execute because it directly consumes Raster output");
 

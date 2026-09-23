@@ -71,6 +71,14 @@ public:
         return observed_resource_reads_;
     }
 
+    [[nodiscard]] bool dependency_audit_was_evaluated() const noexcept {
+        return dependency_audit_evaluated_;
+    }
+
+    [[nodiscard]] bool dependency_audit_passed_last_execution() const noexcept {
+        return dependency_audit_passed_last_execution_;
+    }
+
     [[nodiscard]] bool dependency_audit_passes() const noexcept {
         for (ResourceId observed : observed_resource_reads_) {
             bool declared = false;
@@ -200,12 +208,18 @@ public:
         total_executions_++;
         observed_resource_reads_.clear();
         observed_producer_reads_.clear();
+        dependency_audit_evaluated_ = false;
+        dependency_audit_passed_last_execution_ = false;
 
         bool ok = kernel_(*this, state_store, inputs);
         if (ok) {
-            if (dependency_audit_enabled_ && !dependency_audit_passes()) {
-                mark_failed(ExecutionReason::InputVersionChanged);
-                return false;
+            if (dependency_audit_enabled_) {
+                dependency_audit_evaluated_ = true;
+                dependency_audit_passed_last_execution_ = dependency_audit_passes();
+                if (!dependency_audit_passed_last_execution_) {
+                    mark_failed(ExecutionReason::InputVersionChanged);
+                    return false;
+                }
             }
             current_output_version_++;
             // Record versions only after successful computation and State Store commit.
@@ -249,6 +263,8 @@ private:
     bool dependency_audit_enabled_{false};
     std::unordered_set<ResourceId> observed_resource_reads_;
     std::unordered_set<TWRId> observed_producer_reads_;
+    bool dependency_audit_evaluated_{false};
+    bool dependency_audit_passed_last_execution_{false};
 };
 
 } // namespace twrf

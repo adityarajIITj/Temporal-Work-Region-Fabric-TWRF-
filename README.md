@@ -124,7 +124,7 @@ FPGA resource figures and RTL mappings in docs/FPGA_FEASIBILITY.md are design es
 
 ## Experimental result
 
-The validated 14-case raster matrix currently shows execution/output parity and zero dependency-audit failures, but the default timing parameterization does **not** demonstrate a TWRF cost advantage over the executable software incremental baseline or the temporal-cache baseline. Detailed values and interpretation are in `docs/RESULTS.md`. This is a derived timing-model result, not a physical-GPU benchmark.
+The validated 14-case raster matrix shows execution/output parity and zero dependency-audit failures. Under the default timing parameters, TWRF has lower derived cost than the executable software incremental baseline in all 14 cases, while the temporal-cache baseline remains lower-cost than TWRF and full recomputation remains lower-cost for every non-static case. The 135-setting sensitivity campaign also places TWRF below Baseline C throughout the tested grid. These are derived timing-model results, not physical-GPU benchmarks.
 
 ## Validation gates
 
@@ -155,6 +155,10 @@ See docs/RESEARCH_VALIDATION_GATE.md.
 - [Research freeze record](docs/RESEARCH_FREEZE.md)
 - [Limitations and threats to validity](docs/LIMITATIONS.md)
 - [FPGA/RTL feasibility](docs/FPGA_FEASIBILITY.md)
+- [Publication paper draft](docs/PAPER_DRAFT.md)
+- [Figures and tables plan](docs/FIGURES_AND_TABLES.md)
+- [Appendix assembly](docs/APPENDIX_INDEX.md)
+- [Publication freeze record](docs/PUBLICATION_FREEZE.md)
 
 ## Running the project
 

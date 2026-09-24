@@ -4,12 +4,13 @@
 #include "twrf/core/twr.hpp"
 #include "twrf/core/graph.hpp"
 #include "twrf/core/state_store.hpp"
+#include "twrf/core/metrics.hpp"
 
 namespace twrf {
 
 class ChangeTracker {
 public:
-    static bool evaluate_dirty(TemporalWorkRegion& twr, const TWRGraph& graph, const LogicalStateStore& state_store) {
+    static bool evaluate_dirty(TemporalWorkRegion& twr, const TWRGraph& graph, const LogicalStateStore& state_store, MetricsCollector* metrics = nullptr) {
         if (twr.status() == TWRStatus::Dirty) {
             return true; // Already dirty
         }
@@ -18,9 +19,11 @@ public:
         for (const auto& binding : twr.resource_bindings()) {
             const auto* res = graph.get_resource(binding.resource_id);
             if (!res) continue;
+            if (metrics) metrics->resource_version_checks++;
 
             if (res->version() != binding.recorded_version) {
                 // Check conservative spatial bounding filter
+                if (metrics) metrics->bounding_checks++;
                 if (twr.region().overlaps(res->bounds())) {
                     twr.mark_dirty(ExecutionReason::InputVersionChanged);
                     return true;
@@ -30,6 +33,7 @@ public:
 
         // 2. Upstream producer output changes
         for (const auto& up : twr.upstream_producers()) {
+            if (metrics) metrics->producer_version_checks++;
             VersionNumber cur_prod_ver = state_store.get_output_version(up.producer_id);
             if (cur_prod_ver != up.recorded_version) {
                 twr.mark_dirty(ExecutionReason::ProducerOutputChanged);

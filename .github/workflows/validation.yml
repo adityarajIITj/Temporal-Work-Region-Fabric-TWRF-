@@ -1,0 +1,71 @@
+name: TWRF Validation
+
+on:
+  push:
+    branches:
+      - research/p0-semantic-hardening
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Smoke demo
+        run: ./build/twrf_demo > /tmp/twrf_demo.log
+
+      - name: Validate JSON
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("results/phase3_sweeps.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+          assert len(data["change_rate_sweep"]) == 7
+          assert len(data["locality_sweep"]) == 2
+          assert len(data["full_matrix"]) == 14
+          for point in data["full_matrix"]:
+              assert point["execution_set_parity"] is True
+              assert point["output_parity"] is True
+              assert point["twrf_dependency_audit_failures"] == 0
+              assert point["baseline_c_dependency_audit_failures"] == 0
+              for key in ("object_change_fraction", "dirty_region_fraction", "executed_region_fraction"):
+                  assert 0.0 <= point[key] <= 1.0
+          import math
+          with open("results/twrf_sensitivity.json", "r", encoding="utf-8") as f:
+              sensitivity = json.load(f)
+          grid = sensitivity["sensitivity"]
+          assert len(grid) == 135
+          for point in grid:
+              assert point["cases"] == 14
+              assert 0.0 <= point["twrf_vs_c_win_fraction"] <= 1.0
+              assert math.isfinite(point["min_twrf_vs_c_ratio"])
+              assert math.isfinite(point["max_twrf_vs_c_ratio"])
+              assert point["min_twrf_vs_c_ratio"] >= 0.0
+              assert point["max_twrf_vs_c_ratio"] >= point["min_twrf_vs_c_ratio"]
+          print("JSON research-gate validation passed")
+          PY
+
+
+      - name: Upload experimental artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: twrf-research-results
+          path: |
+            results/phase3_sweeps.json
+            results/twrf_architectural_comparison.png
+            results/twrf_sensitivity.json
+          if-no-files-found: warn

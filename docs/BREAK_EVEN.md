@@ -1,48 +1,191 @@
-# Break-Even Cost Model & Formal Correction
+# TWRF Break-Even Cost Model
 
-**Scope:** Analytical cost foundations for Temporal Work Region Fabric (TWRF)  
-**Status:** Mandatory Reference Standard for all simulator sweeps and tests
+**Status:** Final analytical reference.
 
----
-
-## 1. The Break-Even Model
+## 1. Single-region model
 
 Let:
-- $C_r \in \mathbb{R}^+$: The computational cost (cycles/energy) to fully recompute a work region from scratch.
-- $C_t \in \mathbb{R}^+$: The tracking, scheduling, and validation overhead required by TWRF to verify whether a region is clean or dirty.
-- $p \in [0, 1]$: The probability that an individual region's inputs or dependencies have mutated during a given frame step (the **rate of change** or scene volatility).
 
-### 1.1 Expected Cost Formulations
-* **Full Recompute Baseline ($E[\text{Full}]$)**:
-  Every frame executes the work region unconditionally:
-  $$E[\text{Full}] = C_r$$
+- (C_r>0): recomputation cost of a region;
+- (C_t): management cost required to decide whether that region must execute;
+- (p_ein[0,1]): fraction/probability of regions that execute after invalidation.
 
-* **TWRF Execution Model ($E[\text{TWRF}]$)**:
-  TWRF always incurs the tracking overhead $C_t$. If the region has changed (with probability $p$), it must also pay the full recomputation cost $C_r$. If the region is clean (with probability $1 - p$), it pays $0$ recomputation cost:
-  $$E[\text{TWRF}] = C_t + p \cdot C_r + (1 - p) \cdot 0 = C_t + p \cdot C_r$$
+The simplified expected costs are:
 
-### 1.2 Derivation of the Benefit Threshold
-TWRF achieves net performance benefit over full recomputation if and only if:
-$$E[\text{TWRF}] < E[\text{Full}]$$
-$$C_t + p \cdot C_r < C_r$$
-$$C_t < C_r - p \cdot C_r$$
-$$C_t < (1 - p) \cdot C_r$$
-Dividing both sides by $C_r$ (since $C_r > 0$):
-$$\frac{C_t}{C_r} < 1 - p \implies p < 1 - \frac{C_t}{C_r}$$
+[
+C_{full}=C_r
+]
 
----
+and:
 
-## 2. Rejection of the Inverted Formula
+[
+C_{TWRF}=C_t+p_eC_r.
+]
 
-In earlier exploratory notes (such as Part 14.1 in early research memos), an algebraic error produced:
-$$C_t < p \cdot C_r \implies p > \frac{C_t}{C_r} \quad \text{[REJECTED / INVALID]}$$
+TWRF is beneficial in this simplified model when:
 
-### Why the Old Formula Is Physically Absurd
-* If $p > C_t / C_r$, as scene dynamics increase ($p \to 1$), TWRF would supposedly become *more* advantageous.
-* In physical reality, when $p = 1$ (100% of regions change), TWRF performs the exact same recomputation work as baseline ($C_r$) **plus** the tracking overhead ($C_t$), yielding a total cost of $C_r + C_t > C_r$. TWRF strictly loses.
-* Under the correct formula $p < 1 - C_t / C_r$:
-  - When $C_t \ll C_r$ (e.g. $C_t / C_r = 0.01$), TWRF wins whenever change is below $99\%$ ($p < 0.99$).
-  - When $C_t / C_r = 0.20$, TWRF wins only when change is below $80\%$ ($p < 0.80$).
-  - When $C_t \ge C_r$, $1 - C_t / C_r \le 0$, meaning TWRF can **never** win for any non-negative change rate $p$.
+[
+C_t+p_eC_r<C_r
+]
 
-**Test Invariant S1-08 enforces this mathematical property across all test suites.**
+which gives:
+
+[
+\boxed{
+p_e<1-\frac{C_t}{C_r}
+}
+]
+
+The right-hand side is an analytical threshold, not a measured universal property of GPUs.
+
+## 2. Why the old inverted expression is rejected
+
+The expression
+
+[
+p>\frac{C_t}{C_r}
+]
+
+does not describe the TWRF break-even condition.
+
+As (p_eightarrow1):
+
+[
+C_{TWRF}ightarrow C_t+C_r
+]
+
+while:
+
+[
+C_{full}=C_r.
+]
+
+For positive (C_t), the incremental scheme therefore carries an overhead tax in the fully dynamic regime.
+
+The formal test suite keeps this algebraic correction as an explicit invariant.
+
+## 3. The implemented model is richer
+
+The simulator does not reduce the complete experiment to one (C_t) scalar.
+
+It models:
+
+[
+C_{TWRF}=
+C_{compute}
++C_{detect}
++C_{schedule}
++C_{dependency}
++C_{state}
++C_{scene}
++C_{interconnect}.
+]
+
+The corresponding software incremental baseline uses separately parameterized software control-plane costs.
+
+The final cycle value is:
+
+[
+C_{model}=sum_j n_jc_j
+]
+
+where (n_j) is measured from the simulator and (c_j) is an explicit timing parameter.
+
+## 4. Which volatility variable matters
+
+The workload generator starts with an object mutation parameter:
+
+[
+p_o=
+\frac{mutated objects}{objects}.
+]
+
+The fabric then produces:
+
+[
+p_r=
+\frac{dirty regions}{regions}
+]
+
+and:
+
+[
+p_e=
+\frac{executed regions}{regions}.
+]
+
+The practical break-even analysis should therefore use (p_e), because (p_e) is the quantity that determines how much recomputation is actually avoided.
+
+A small (p_o) can still produce a large (p_e) when a dependency or spatial invalidation has broad fan-out.
+
+## 5. Architectural interpretation
+
+The useful design question is not:
+
+> Does temporal reuse work?
+
+It is:
+
+[
+\boxed{
+	ext{When does the cost of managing persistent work become lower than the cost of repeating valid computation?}
+}
+]
+
+For TWRF versus a software incremental implementation, the stronger comparison is:
+
+[
+C_{TWRF}<C_{B3}.
+]
+
+This isolates whether hardware-oriented management has enough advantage to justify architectural specialization.
+
+## 6. Sensitivity requirements
+
+A final evaluation should sweep:
+
+- resource/version-check latency;
+- spatial-check latency;
+- scheduler operation latency;
+- dependency-notification latency;
+- State Store read/write latency;
+- region granularity;
+- State Store capacity;
+- dependency depth;
+- workload locality.
+
+The resulting break-even surface is more informative than a single claimed crossover percentage.
+
+## 7. Worst-case regime
+
+At:
+
+[
+p_e=1
+]
+
+the simplified model becomes:
+
+[
+C_{TWRF}=C_t+C_r>C_r.
+]
+
+This regime is not hidden from the evaluation. The test suite explicitly checks that the modeled TWRF cost exceeds the zero-management full-recompute baseline when all regions execute.
+
+The precise penalty is parameter-dependent.
+
+## 8. Reproducibility
+
+Every machine-readable sweep record should contain enough information to reconstruct the comparison:
+
+- requested mutation parameter;
+- locality;
+- (p_o,p_r,p_e);
+- executed/skipped counts;
+- execution-set parity;
+- output parity;
+- dependency-audit failures;
+- modeled cycle components;
+- total modeled cycles.
+
+This is the schema used by the final experiment runner.

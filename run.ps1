@@ -22,15 +22,15 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "[SUCCESS] Build completed successfully." -ForegroundColor Green
 
-# 3. Run all 26 acceptance tests
-Write-Host "`n[STEP 2/4] Running Full Acceptance Test Suite (26 Tests)..." -ForegroundColor Yellow
+# 3. Run all 35 acceptance tests
+Write-Host "`n[STEP 2/4] Running Full Acceptance Test Suite (35 Tests)..." -ForegroundColor Yellow
 ctest --test-dir build --output-on-failure
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] Acceptance tests failed!" -ForegroundColor Red
     exit $LASTEXITCODE
 }
-Write-Host "[SUCCESS] All 26 acceptance tests passed (100% determinism)." -ForegroundColor Green
+Write-Host "[SUCCESS] All 35 registered acceptance tests passed." -ForegroundColor Green
 
 # 4. Run the comprehensive demonstration
 Write-Host "`n[STEP 3/4] Running Comprehensive TWRF Virtual GPU Demo..." -ForegroundColor Yellow
@@ -44,8 +44,8 @@ Write-Host "`n==================================================================
 Write-Host "                     ALL TASKS COMPLETED SUCCESSFULLY                   " -ForegroundColor Cyan
 Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host "Generated Artifacts:" -ForegroundColor White
-Write-Host "  * Rendered Frames: results/demo_frame0.ppm, results/demo_frame1_static.ppm, results/demo_frame2_dynamic.ppm"
-Write-Host "  * Experimental Data: results/phase3_sweeps.json"
-Write-Host "  * Break-Even Plot:   results/break_even_curve.png"
-Write-Host "  * Specifications:    docs/ (TWRF_SPEC, SEMANTICS, LIMITATIONS, PRIOR_ART, FPGA_FEASIBILITY)"
+Write-Host "  * Experimental Data:  results/phase3_sweeps.json"
+Write-Host "  * Sensitivity Data:   results/twrf_sensitivity.json"
+Write-Host "  * Architectural Plot: results/twrf_architectural_comparison.png"
+Write-Host "  * Specifications:     docs/"
 Write-Host ""

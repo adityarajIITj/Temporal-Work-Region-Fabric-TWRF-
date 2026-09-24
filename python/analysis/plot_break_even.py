@@ -1,65 +1,68 @@
 #!/usr/bin/env python3
-"""
-TWRF Phase 3 Scientific Evaluation: Break-Even Curve & Architectural Comparison.
-Reads machine-readable sweep JSON and produces publication-quality comparison figures.
-"""
+"""Plot the final TWRF/B1/B2/B3 architectural timing comparison."""
+
+from __future__ import annotations
 
 import json
 import os
-import sys
+from typing import Any
+
 import matplotlib.pyplot as plt
 
-def main():
-    json_path = os.path.join(os.path.dirname(__file__), "..", "..", "results", "phase3_sweeps.json")
+
+def load_results(path: str) -> dict[str, Any]:
+    with open(path, "r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def main() -> None:
+    json_path = os.path.join(
+        os.path.dirname(__file__), "..", "..", "results", "phase3_sweeps.json"
+    )
     if not os.path.exists(json_path):
-        print(f"[WARN] Result file {json_path} not found. Running with default sweep data.")
+        print(f"[WARN] Result file not found: {json_path}")
         return
 
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
+    data = load_results(json_path)
     sweep = data.get("change_rate_sweep", [])
     if not sweep:
         print("[ERROR] No change_rate_sweep data found.")
-        sys.exit(1)
+        return
 
-    change_rates = [pt["change_rate"] * 100.0 for pt in sweep]
-    twrf_cycles = [pt["twrf_total_cycles"] for pt in sweep]
-    base_a_cycles = [pt["baseline_a_total_cycles"] for pt in sweep]
-    base_b_cycles = [pt["baseline_b_total_cycles"] for pt in sweep]
+    p_e = [float(point["executed_region_fraction"]) * 100.0 for point in sweep]
+    p_o = [float(point["object_change_fraction"]) * 100.0 for point in sweep]
+    twrf = [float(point["twrf_total_cycles"]) for point in sweep]
+    base_a = [float(point["baseline_a_total_cycles"]) for point in sweep]
+    base_b = [float(point["baseline_b_total_cycles"]) for point in sweep]
+    base_c = [float(point["baseline_c_total_cycles"]) for point in sweep]
 
-    print("\n" + "="*80)
-    print("TWRF PHASE 3 EVALUATION: ARCHITECTURAL COMPARISON & BREAK-EVEN RESULTS")
-    print("="*80)
-    print(f"{'Change Rate (%)':<18} | {'TWRF Cycles':<15} | {'Baseline A (Full)':<18} | {'Baseline B (Cache)':<18} | {'TWRF Status':<12}")
-    print("-"*80)
+    print("=" * 96)
+    print(
+        f"{'p_o (%)':>10} {'p_e (%)':>10} {'TWRF':>16} "
+        f"{'Baseline A':>16} {'Baseline B':>16} {'Baseline C':>16}"
+    )
+    print("-" * 96)
+    for po, pe, a, b, c, d in zip(p_o, p_e, twrf, base_a, base_b, base_c):
+        print(f"{po:10.1f} {pe:10.1f} {a:16.1f} {b:16.1f} {c:16.1f} {d:16.1f}")
+    print("=" * 96)
 
-    for pt in sweep:
-        p_pct = pt["change_rate"] * 100.0
-        twrf = pt["twrf_total_cycles"]
-        ba = pt["baseline_a_total_cycles"]
-        bb = pt["baseline_b_total_cycles"]
-        status = "WIN" if (twrf < ba and twrf < bb) else ("WIN vs A" if twrf < ba else "LOSS (Dynamic)")
-        print(f"{p_pct:>16.1f}% | {twrf:>15.1f} | {ba:>18.1f} | {bb:>18.1f} | {status:<12}")
-    print("="*80)
-
-    # Plotting
-    os.makedirs(os.path.dirname(json_path), exist_ok=True)
     plt.figure(figsize=(10, 6), dpi=150)
-    plt.plot(change_rates, twrf_cycles, 'o-', color='#1f77b4', linewidth=2.5, label='Proposed: TWRF (Persistent Dataflow)')
-    plt.plot(change_rates, base_a_cycles, '--', color='#d62728', linewidth=2.0, label='Baseline A: Full Recompute (SIMT)')
-    plt.plot(change_rates, base_b_cycles, '-.', color='#2ca02c', linewidth=2.0, label='Baseline B: Conventional Temporal Cache')
+    plt.plot(p_e, twrf, "o-", linewidth=2.2, label="TWRF")
+    plt.plot(p_e, base_a, "--", linewidth=1.8, label="Baseline A: Full recompute")
+    plt.plot(p_e, base_b, "-.", linewidth=1.8, label="Baseline B: Temporal cache")
+    plt.plot(p_e, base_c, ":", linewidth=2.2, label="Baseline C: Software incremental")
 
-    plt.title("TWRF vs. Baselines: Total Execution Cycles vs. Scene Volatility (p)", fontsize=14, fontweight='bold')
-    plt.xlabel("Scene Change Rate p (% of affected regions)", fontsize=12)
-    plt.ylabel("Total Execution Cycles per Frame", fontsize=12)
-    plt.grid(True, linestyle=':', alpha=0.6)
-    plt.legend(fontsize=11)
-
-    out_png = os.path.join(os.path.dirname(json_path), "break_even_curve.png")
+    plt.xlabel("Executed-region fraction p_e (%)")
+    plt.ylabel("Derived total execution cycles")
+    plt.title("TWRF Architectural Timing Comparison")
+    plt.grid(True, linestyle=":", alpha=0.6)
+    plt.legend()
     plt.tight_layout()
+
+    out_png = os.path.join(os.path.dirname(json_path), "twrf_architectural_comparison.png")
     plt.savefig(out_png)
-    print("\n[INFO] Saved break-even plot successfully to results/break_even_curve.png")
+    print(f"[INFO] Saved: {out_png}")
+
 
 if __name__ == "__main__":
     main()

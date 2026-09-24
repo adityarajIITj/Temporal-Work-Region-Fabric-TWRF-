@@ -1,55 +1,163 @@
-# TWRF Execution Semantics & Formal Invariants
+# TWRF Execution Semantics and Formal Invariants
 
-**Scope:** Formal operational semantics for Temporal Work Region Fabric (TWRF)  
-**Version:** 0.1 (Sub-Plan 1)
+**Status:** Final semantic contract for the research implementation.
 
----
+## 1. Temporal Work Region state
 
-## 1. State Space & Lifecycle Transitions
+A TWR is represented conceptually as:
 
-Each TWR $T$ operates within a finite state machine:
+R_i=(ID_i,A_i,S_i,I_i,O_i,V_i,Sigma_i,D_i,Q_i)
 
-```mermaid
-stateDiagram-v2
-    [*] --> IdleClean: Allocate & Initialize
-    IdleClean --> Dirty: Input Version Increment / Producer Commit
-    Dirty --> Ready: Pending Dependencies == 0
-    Ready --> Executing: Scheduler Pop
-    Executing --> IdleClean: Output Committed & Dependents Notified
-```
+where ID_i persists across frames even when the TWR is clean and does not execute.
 
-### 1.1 Formal Invariants
-1. **Invariant 1 (Lifecycle Cleanliness)**: Upon completion of execution and output commit, a TWR's recorded input version vector $\vec{v}_{\text{recorded}}$ must match the current versions of all bound resources:
-   $$\vec{v}_{\text{recorded}}(T) = \vec{v}_{\text{current}}(\text{Inputs}(T))$$
-2. **Invariant 2 (Monotonic Propagation)**: If a producer TWR $P$ finishes execution and updates its output version $V_{P} \to V_{P}'$, every direct consumer $C \in \text{Consumers}(P)$ must transition to `Dirty` if it was `IdleClean`.
-3. **Invariant 3 (Readiness Soundness)**: A TWR $T$ shall never enter the `Ready` state while $\text{pending\_dependencies}(T) > 0$.
-4. **Invariant 4 (Deterministic Step Order)**: Given identical initial graph states and identical sequence of resource mutations, the scheduler step function must yield an identical sequence of executed TWR IDs and output versions.
+The implemented lifecycle is:
 
----
+Dirty -> Ready -> Executing -> IdleClean
 
-## 2. Invalidation Asymmetry & Oracle Rule
+with an explicit failure state:
 
-### 2.1 The Conservative Filter Principle
-Let $\Delta$ be the true semantic delta of an input:
-$$\text{IsModified}(R) \iff \text{Version}(R) > \text{RecordedVersion}(R)$$
+Executing -> Failed.
 
-If an external mutation provides a spatial bounding box $B_{\text{change}}$, the invalidation filter evaluates:
-$$\text{Filter}(T) = B_{\text{change}} \cap \text{Region}(T) \neq \emptyset$$
+A failed execution may be retried, but it does not publish a valid output or release downstream consumers.
 
-* **Safe Over-estimation**: If $\text{Filter}(T) = \text{true}$ even when no pixel inside $T$ actually changes, $T$ re-executes. The final output is bitwise identical to the cached state. Correctness is preserved.
-* **Prohibited Under-estimation**: If $\text{Filter}(T) = \text{false}$ while data inside $T$ has changed, $T$ is skipped, resulting in a **Stale State Hazard**. The test oracle must immediately assert and terminate execution.
+## 2. Clean-state invariant
 
----
+A TWR can become clean only after:
 
-## 3. Dependency Notification Protocol
+1. its kernel reports success;
+2. dependency auditing, when enabled, passes;
+3. its output commit succeeds;
+4. current resource versions are recorded;
+5. upstream output versions are recorded.
 
-When TWR $P$ executes:
-1. $P$ executes its kernel function over current input buffers.
-2. $P$ commits output payload to its dedicated slot in `LogicalStateStore`.
-3. Output version $V_P$ increments: $V_P \leftarrow V_P + 1$.
-4. For each consumer $C \in \text{Consumers}(P)$:
-   - Update $C$'s recorded version for input $P$.
-   - Mark $C$ as `Dirty`.
-   - Decrement $C$'s pending dependencies: $\text{pending\_dependencies}(C) \leftarrow \text{pending\_dependencies}(C) - 1$.
-   - If $\text{pending\_dependencies}(C) == 0$, push $C$ to `ReadyQueue`.
-5. $P$ transitions to `IdleClean`.
+Therefore a failed kernel or failed output commit cannot silently become reusable.
+
+## 3. Dependency soundness
+
+For every executable TWR:
+
+ObservedMutableDependencies(R_i) subset DeclaredDependencies(R_i).
+
+Observed external resources are reported with the observe_resource(ResourceId) contract, and observed producer outputs with the observe_upstream_producer(TWRId) contract.
+
+The runtime audit rejects an execution if an observed dependency is absent from the TWR declaration.
+
+This is intentionally a contract checker rather than automatic compiler-level memory instrumentation.
+
+## 4. Invalidation asymmetry
+
+False positives are safe:
+
+FalsePositiveInvalidation -> Extra Work
+
+False negatives are unsafe:
+
+FalseNegativeInvalidation -> Potentially Stale Output.
+
+The acceptance condition is:
+
+FNI=0.
+
+Optimization therefore becomes:
+
+min FPI subject to FNI=0.
+
+## 5. Version validity
+
+For each bound external resource r, the TWR stores a recorded version v_r.
+
+A resource change is detected when V(r) != v_r.
+
+For spatial resources the implementation may then apply a conservative region filter. Bounding tests are performed after a version change rather than unconditionally.
+
+For an upstream TWR P, the analogous validity condition uses its persistent State Store output version.
+
+## 6. Dependency readiness
+
+A dirty TWR with no dirty upstream producer is eligible for the ready set immediately.
+
+For a dirty TWR T:
+
+pending(T) = |{P in D_in(T): P will execute this frame}|.
+
+This avoids waiting for clean producers that intentionally emit no completion event.
+
+A downstream TWR becomes eligible only after every active upstream producer has successfully committed.
+
+## 7. Deterministic scheduling
+
+The TWRF priority queue orders ready work by:
+
+1. higher priority;
+2. greater topological depth;
+3. lower TWR ID.
+
+The software Baseline C scheduler implements the same semantic ordering with a linear ready-set scan. This allows execution-set parity to be tested without requiring the software baseline to use the same hardware-oriented data structure.
+
+## 8. Persistent state
+
+A TWR's output remains in the State Store across frames.
+
+The output version advances only after successful execution and commit:
+
+V_O^(t+1) = V_O^t + 1.
+
+A skipped TWR retains its previously committed output.
+
+This persistence is the architectural mechanism that permits temporal reuse.
+
+## 9. Derived-input freshness
+
+Derived state must be refreshed whenever its generating input changes.
+
+The Ray workload explicitly maintains:
+
+Camera_t -> PrimaryRays_t -> RayTrace_t.
+
+A camera mutation regenerates primary rays before ray-batch execution can consume them.
+
+This prevents the invalid condition in which an invalidation event occurs but the kernel still consumes a stale derived representation.
+
+## 10. Oracle equivalence
+
+For raster workloads, the incremental output is compared with unconditional full recomputation on the same mutated scene:
+
+Output_TWRF = Output_Full.
+
+The renderer provides bitwise framebuffer comparison.
+
+## 11. Software baseline equivalence
+
+For paired TWRF/B3 experiments:
+
+E_TWRF(t) = E_B3(t)
+
+and:
+
+Output_TWRF(t) = Output_B3(t).
+
+Only after these conditions hold should cycle-model comparisons be interpreted as comparisons of architecture rather than differences in semantic work performed.
+
+## 12. Heterogeneous dependency contract
+
+The representative heterogeneous DAG contains:
+
+Raster -> Ray,
+Raster -> Neural,
+Ray -> Neural.
+
+Neural processing also consumes its own previously committed temporal output as persistent state.
+
+This validates that TWR semantics are not restricted to one compute domain.
+
+## 13. Correctness hierarchy
+
+The implementation therefore establishes a hierarchy of claims:
+
+Dependency Soundness
+-> Invalidation Safety
+-> Execution Correctness
+-> Workset Parity
+-> Performance Comparability.
+
+Each stage is a prerequisite for the next.

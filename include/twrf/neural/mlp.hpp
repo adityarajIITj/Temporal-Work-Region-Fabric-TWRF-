@@ -116,6 +116,9 @@ public:
         // Kernel reads persistent state from previous frame, computes MLP, and writes back state
         twr.set_kernel([this](TemporalWorkRegion& self, LogicalStateStore& store,
                               const std::vector<const VersionedResource*>&) -> bool {
+            self.observe_resource(NEURAL_WEIGHTS_RESOURCE_ID);
+            self.observe_resource(NEURAL_INPUT_RESOURCE_ID);
+
             // Read previous hidden state from State Store if exists
             size_t sz = 0;
             VersionNumber ver = 0;
@@ -149,6 +152,7 @@ public:
             return true;
         });
 
+        for (const auto& [id, twr] : graph_->twrs()) twr->enable_dependency_audit(true);
         graph_->validate_and_compute_depths();
     }
 

@@ -1,139 +1,194 @@
 # TWRF Research Validation Gate
 
-This document defines the validation sequence required before using TWRF performance results as architectural evidence.
+**Status:** Final validation specification for the research branch  
+**Purpose:** Define the minimum evidence required before a TWRF architectural conclusion is treated as supported.
 
-## Gate 0 — Semantic validity
+## Gate 0 — Build and lifecycle validity
 
-A Temporal Work Region (TWR) is valid only when its output is committed successfully and its recorded input/dependency versions describe the computation that produced that output.
+Acceptance:
 
-Required invariants:
-
-- Failed execution never becomes IdleClean.
-- Failed producer execution never releases downstream consumers.
-- State Store commit failure is execution failure.
-- Output version advances only after successful computation and output commit.
-- A rejected State Store write does not allocate a phantom slot.
-- Every direct mutable producer/output consumed by a TWR is represented in the dependency graph.
+- project configures and builds cleanly;
+- all registered regression tests pass;
+- TWR lifecycle transitions do not mark failed work clean;
+- failed State Store commits do not advance output versions;
+- failed producers do not release downstream consumers.
 
 ## Gate 1 — Dependency soundness
 
-ObservedMutableDependencies(R_i) must be a subset of DeclaredDependencies(R_i).
+The required invariant is:
 
-False-negative invalidation must be zero:
+[
+ObservedMutableDependencies(T)
+subseteq
+DeclaredDependencies(T)
+]
 
-FNI = missed required invalidations / required invalidations = 0
+The runtime audit covers:
 
-False positives may exist and should be measured separately.
+- versioned external resources;
+- producer-output dependencies.
 
-## Gate 2 — Full recomputation oracle
+The following must hold for the built-in workloads:
 
-For every workload/event trace, compare incremental execution against forced recomputation.
+[
+AuditFailures=0.
+]
 
-Required:
+Important scope limitation: the audit is an explicit runtime contract. It does not automatically instrument arbitrary C++ memory reads through captured objects.
 
-Output_TWRF(t) == Output_Full(t)
+## Gate 2 — Full-recompute oracle
 
-for all tested frames and all externally observable outputs.
+For raster workloads, incremental rendering must be compared with a forced full-recompute oracle on the same post-mutation scene.
 
-The equality criterion must be workload-specific: exact byte equality where deterministic, otherwise an explicitly documented numerical tolerance.
+Required output condition:
 
-## Gate 3 — Software incremental parity (B3)
+[
+Output_{incremental}=Output_{full}.
+]
 
-B3 is the software-equivalent incremental runtime. It must use the same:
+The current renderer exposes bitwise framebuffer comparison and pixel-difference helpers.
 
-- TWR partition
-- resource/version events
-- dependency DAG
-- mutation trace
-- persistent-state semantics
-- correctness oracle.
+## Gate 3 — Software incremental parity
 
-Required execution-set parity:
+Baseline C is an executable software incremental scheduler using:
 
-Executed_B3(t) == Executed_TWRF(t)
+- the same graph;
+- the same TWR kernels;
+- the same mutation event;
+- the same persistent-state semantics;
+- the same deterministic ordering rule.
 
-before comparing cost.
+For each paired experiment:
 
-B3 interface:
+[
+E_{TWRF}=E_{B3}.
+]
 
-- register_region(id, spatial_extent, inputs, dependencies, state_descriptor)
-- update_resource(resource_id, new_version)
-- mark_dirty(region_id, reason)
-- propagate_invalidations()
-- ready_regions()
-- execute(region_id)
-- commit(region_id, output)
-- frame_trace()
-
-B3 should not receive privileged knowledge unavailable to TWRF. It represents the same semantic mechanism in software; only placement of management work differs.
+The final matrix requires both execution-set parity and bitwise output parity.
 
 ## Gate 4 — Measured simulator accounting
 
-Record separately:
+The simulator records operation counts separately from cycle estimates.
 
-- TWRs total
-- TWR executions
-- TWR skips
-- execution fraction p_e = K/N
-- dependency traversals
-- version checks
-- ready-queue operations
-- State Store reads/writes
-- bytes read/written
-- false-positive invalidations
-- failed executions
-- retry count.
+Required measurable quantities include:
 
-These are measured simulator quantities, not hardware cycle measurements.
+| Counter | Meaning |
+|---|---|
+| resource_version_checks | external resource version comparisons |
+| producer_version_checks | producer output-version comparisons |
+| bounding_checks | spatial checks after a detected version change |
+| dirty_propagations | downstream invalidation events |
+| dependency_traversals | successful producer-to-consumer notifications |
+| ready_queue_pushes | scheduler ready-set insertions |
+| ready_queue_pops | scheduler dispatch removals |
+| failed_executions | unsuccessful TWR execution attempts |
+| State Store bytes | actual measured read/write traffic |
 
-## Gate 5 — Architectural timing model
+These counters must be the source of the corresponding control-plane timing terms.
 
-Only after Gates 0–4 pass should modeled timing be evaluated.
+## Gate 5 — Parameterized timing model
 
-For TWRF:
+Cycle values are derived:
 
-C_TWRF = C_detect + C_prop + C_schedule + C_state + C_graph + p_e C_r
+[
+C_{model}=sum_j n_j c_j
+]
 
-For B3:
+where (n_j) is a measured simulator operation count and (c_j) is an explicitly declared timing parameter.
 
-C_B3 = C_detect_SW + C_prop_SW + C_schedule_SW + C_state_SW + C_graph_SW + p_e C_r
+No parameterized cycle result may be called a physical-GPU measurement.
 
-The architectural question is not merely whether TWRF beats full recomputation. The stronger comparison is whether the hardware-oriented organization reduces incremental-management cost relative to an equivalent software incremental runtime.
+## Gate 6 — Workload matrix
 
-## Gate 6 — Parameter sweeps
+The standard campaign contains:
 
-Sweep independently:
+[
+p_oin{0,.05,.10,.25,.50,.75,1}
+]
 
-- object mutation fraction p_o
-- dirty-region fraction p_r
-- executed-region fraction p_e
-- clustered vs dispersed changes
-- tile/region granularity
-- dependency depth
-- persistent-state size
-- State Store capacity.
+under at least:
 
-Do not use object mutation rate as a substitute for executed TWR fraction.
+- clustered locality;
+- dispersed locality.
 
-## Acceptance criteria
+The experiment separately reports:
 
-A result set is admissible for architectural claims only if:
+[
+p_o=\frac{mutated objects}{objects},
+quad
+p_r=\frac{dirty TWRs}{TWRs},
+quad
+p_e=\frac{executed TWRs}{TWRs}.
+]
 
-1. FNI = 0 for the tested dependency/invalidation space.
-2. Incremental output matches the full-recompute oracle.
-3. B3 and TWRF execute the same semantic work under the same event trace.
-4. Failure and State Store commit semantics are tested.
-5. Measured quantities and modeled cycles are reported separately.
-6. Any advantage over B3 is attributable to explicit architectural mechanisms rather than unequal workload semantics.
-7. Worst-case results are reported rather than omitted.
+The simple analytical break-even relation is expressed using (p_e), not (p_o):
 
-## Current P0 regression coverage
+[
+C_{TWRF}=C_t+p_eC_r
+]
 
-This branch adds regression coverage for:
+and:
 
-- failed producer propagation
-- State Store commit failure
-- rejected-write phantom slot creation
-- direct Raster-to-Neural dependency declaration.
+[
+p_e<1-\frac{C_t}{C_r}.
+]
 
-The remaining major validation item is dependency-read auditing: the simulator currently permits kernels to capture application state directly, so declared resource bindings are not yet a complete proof of the actual mutable read set.
+## Gate 7 — Baseline comparison
+
+Three reference models are required:
+
+**A — Full recomputation**
+
+[
+C_A=C_r
+]
+
+**B — Temporal cache**
+
+Cache lookup, validation, miss/refill, and eviction overheads are modeled explicitly.
+
+**C — Software incremental runtime**
+
+Measured software control-plane operations are converted through software timing parameters.
+
+The principal architectural question is:
+
+[
+C_{TWRF}<C_{B3} ?
+]
+
+A TWRF advantage over Baseline A alone is insufficient to establish a hardware-architecture advantage, because software incremental computation may capture much of the same semantic reuse.
+
+## Gate 8 — Sensitivity analysis
+
+The implementation now provides a reproducible 54-setting sensitivity grid:
+
+- tile sizes: {8, 16, 32};
+- hardware control-plane multipliers: {0.25, 0.50, 0.75, 1.00, 1.50, 2.00};
+- State Store latency multipliers: {0.50, 1.00, 2.00}.
+
+Each setting evaluates the complete 14-case mutation/locality matrix and preserves the same semantic workload and parity gates. The generated artifact is `results/twrf_sensitivity.json`.
+
+The objective is not to select one favorable point but to characterize the parameter boundary at which management overhead dominates computation savings. Any reported region in which TWRF is below Baseline C must still retain execution-set parity, output parity, zero dependency-audit failures, full-recompute correctness, and the declared timing assumptions.
+
+## Gate 9 — Hardware realization boundary
+
+FPGA/RTL material is a feasibility study until:
+
+1. synthesizable RTL exists;
+2. the target device is specified;
+3. synthesis results are produced;
+4. timing closure is measured;
+5. simulator traces are replayed against RTL.
+
+Estimated LUT/BRAM/DSP figures must remain labeled estimates before those steps.
+
+## Final acceptance statement
+
+The research is ready for thesis/paper drafting when all implemented semantic and parity gates pass and the experimental results are clearly separated into:
+
+1. measured simulator quantities;
+2. derived timing-model quantities;
+3. hardware feasibility estimates.
+
+The final conclusion must be conditional on workload and architecture parameters.

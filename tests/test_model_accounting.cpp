@@ -24,11 +24,13 @@ int main() {
     auto twrf_acc = twrf::timing::ArchitecturalModels::evaluate_twrf(renderer, res);
     auto base_a_acc = twrf::timing::ArchitecturalModels::evaluate_baseline_a_full_recompute(renderer);
     auto base_b_acc = twrf::timing::ArchitecturalModels::evaluate_baseline_b_temporal_cache(renderer, res);
+    auto base_c_acc = twrf::timing::ArchitecturalModels::evaluate_baseline_c_software_incremental(renderer, res);
 
     // Invariant 1: In all models, total_cycles must equal the exact sum of all sub-components
     TWRF_ASSERT(twrf_acc.is_strictly_accounted(), "S3-01 Failed: TWRF model has untracked cycles");
     TWRF_ASSERT(base_a_acc.is_strictly_accounted(), "S3-01 Failed: Baseline A model has untracked cycles");
     TWRF_ASSERT(base_b_acc.is_strictly_accounted(), "S3-01 Failed: Baseline B model has untracked cycles");
+    TWRF_ASSERT(base_c_acc.is_strictly_accounted(), "S3-01 Failed: Baseline C model has untracked cycles");
 
     // Invariant 2: In TWRF, tracking overhead is non-zero
     TWRF_ASSERT(twrf_acc.tracking_overhead_cycles() > 0.0,
@@ -41,6 +43,8 @@ int main() {
     // Invariant 4: In Baseline B, cache overhead is non-zero
     TWRF_ASSERT(base_b_acc.cache_overhead_cycles > 0.0,
                 "S3-01 Failed: Baseline B cache overhead must be explicitly modeled");
+    TWRF_ASSERT(base_c_acc.tracking_overhead_cycles() > 0.0,
+                "S3-01 Failed: Baseline C software management overhead must be explicitly modeled");
 
     TWRF_TEST_PASS("S3-01: Timing Model Component Attribution & Zero Untracked Cycles");
     return 0;

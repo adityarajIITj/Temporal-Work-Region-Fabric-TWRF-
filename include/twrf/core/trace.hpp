@@ -5,6 +5,7 @@
 #include <vector>
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
 
 namespace twrf {
 
@@ -38,6 +39,38 @@ public:
     [[nodiscard]] const std::vector<TraceEntry>& entries() const noexcept {
         return entries_;
     }
+
+
+    [[nodiscard]] std::vector<TWRId> executed_ids(Timestamp step) const {
+        std::vector<TWRId> ids;
+        for (const auto& e : entries_) {
+            if (e.step == step && e.executed) ids.push_back(e.twr_id);
+        }
+        std::sort(ids.begin(), ids.end());
+        return ids;
+    }
+
+    [[nodiscard]] std::vector<TWRId> executed_ids_since(size_t begin_index) const {
+        std::vector<TWRId> ids;
+        for (size_t i = begin_index; i < entries_.size(); ++i) {
+            if (entries_[i].executed) ids.push_back(entries_[i].twr_id);
+        }
+        std::sort(ids.begin(), ids.end());
+        return ids;
+    }
+
+    [[nodiscard]] bool execution_set_equals(const ExecutionTrace& other,
+                                            Timestamp step) const {
+        return executed_ids(step) == other.executed_ids(step);
+    }
+
+    [[nodiscard]] bool execution_set_equals_since(const ExecutionTrace& other,
+                                                  size_t begin_index,
+                                                  size_t other_begin_index) const {
+        return executed_ids_since(begin_index) ==
+               other.executed_ids_since(other_begin_index);
+    }
+
 
     void clear() noexcept {
         entries_.clear();

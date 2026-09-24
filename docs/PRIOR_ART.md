@@ -1,63 +1,152 @@
-# TWRF Prior-Art Map & Architectural Originality Taxonomy
+# TWRF Prior-Art and Novelty Boundary
 
-This document provides a disciplined, non-hyperbolic taxonomy of the **Temporal Work Region Fabric (TWRF)** architecture, clearly delineating established prior art, architectural combinations, extensions, and unresolved research hypotheses.
+**Purpose:** Define the evidence-supported research position of Temporal Work Region Fabric (TWRF) and prevent novelty claims that exceed the implementation and literature record.
 
----
+## 1. The core distinction
 
-## 1. Established Prior Art (Known Mechanisms)
+TWRF is **not** proposed as a new form of incremental computation.
 
-The individual mechanical components utilized in TWRF build upon decades of graphics architecture, microarchitecture, and dataflow systems research:
+The literature already contains strong mechanisms for:
 
-| Mechanism | Representative Prior Art | How TWRF Uses It |
-| :--- | :--- | :--- |
-| **Tile-Based Deferred Rendering (TBDR)** | Imagination PowerVR, ARM Mali, Qualcomm Adreno, Apple Silicon | Partitioning the display target into bounded rectangular tiles ($8 \times 8$, $16 \times 16$, $32 \times 32$) to bound working set size. |
-| **Temporal Reprojection & Frame Reuse** | Temporal Anti-Aliasing (TAA), NVIDIA DLSS, AMD FSR 2/3, Intel XeSS | Reusing computed color and depth information from preceding frames across motion vectors. |
-| **Dataflow DAG Scheduling** | Static/dynamic dataflow (TRIPS, WaveScalar), coarse-grained reconfigurable arrays (CGRA) | Representing computation stages as a directed acyclic graph with explicit input edges and ready-queue dispatch. |
-| **Hardware Ray Tracing Accelerators** | NVIDIA RT Cores (Turing/Ada), AMD Ray Accelerators (RDNA 2/3), Intel Xe RTU | Dedicated bounding volume hierarchy (BVH) and ray-primitive intersection hardware. |
-| **Neural Rendering Accelerators** | NVIDIA Tensor Cores, Apple Neural Engine, Google TPU | Low-precision matrix-multiply-accumulate (MMA) engines executing small inference networks for denoising/upscaling. |
+- dependency tracking
+- dynamic dependence graphs
+- memoization
+- change propagation
+- demand-driven incremental computation
+- persistent named computation/cache locations
+- incremental graphics and path-traced rendering.
 
----
+The research contribution under evaluation is a particular **GPU architectural organization**:
 
-## 2. Architectural Combinations Implemented in TWRF
+**Persistent Spatial Work Identity**
++
+**Persistent State**
++
+**Version/Validity Tracking**
++
+**Explicit Dependency Graph**
++
+**Hardware-Oriented Scheduling**
 
-TWRF does not claim that tiles, rays, MLPs, or caches are unprecedented. Rather, TWRF explores the architectural synthesis of these concepts into a unified execution model:
+The relevant question is whether that combination, exposed as a first-class execution object in a GPU-like fabric, has useful architectural properties and under what workload/overhead conditions.
 
-1. **Cross-Workload Common Execution Contract**:
-   - Rather than deploying physically segregated, heterogeneous fixed-function blocks (e.g., separate "Tensor Cores" vs. "RT Cores" vs. "Shader Cores") with proprietary driver-managed handoffs, TWRF executes raster tiles, ray batches, and neural blocks as instances of the **same fundamental primitive**: the **Temporal Work Region (TWR)**.
-2. **Persistent Inter-Frame State Store**:
-   - Conventional GPUs treat on-chip tile buffers (Tile Memory) as transient scratchpads that are cleared or written out to VRAM at the conclusion of each render pass. TWRF models a persistent on-chip **Logical State Store** where outputs remain resident across frame boundaries, keyed by region identity and version tags.
-3. **Version-Driven Hardware Scheduling**:
-   - Rather than relying on software shaders or compute dispatches to inspect motion vectors and reproject samples, change detection is integrated into the scheduling frontier: scalar version checks and conservative spatial bounds dictate execution eligibility before work reaches compute ALUs.
+## 2. Self-adjusting computation
 
----
+Self-adjusting computation is the strongest conceptual prior-art challenge.
 
-## 3. Extensions & Unresolved Novelty
+Acar's work models computations that automatically adjust to external changes and develops dependence tracking and change propagation mechanisms. The associated experimental literature explicitly combines dynamic dependence graphs and memoization to identify and re-execute affected computation while reusing unaffected computation.
 
-The primary research hypotheses being tested by TWRF that require ongoing investigation are:
+Implication for TWRF:
 
-### Hypothesis 1: Heterogeneous Cross-Stage Invalidation Without CPU Intervention
-- In traditional graphics APIs (Vulkan/DirectX 12), orchestrating a pipeline where a raster G-buffer feeds ray-traced shadows which feed a neural denoiser requires explicit render passes, command buffers, and pipeline barriers.
-- TWRF models whether hardware-level producer-consumer dependency edges can propagate dirty states automatically across heterogeneous passes. For instance, when a light source moves, TWRF demonstrates that the raster stage is automatically skipped while ray and neural stages execute, with zero CPU driver overhead.
+> Selective re-execution driven by dependencies is not novel by itself.
 
-### Hypothesis 2: Hardware-Governed Dynamic Break-Even Fallback
-- Conventional temporal reuse algorithms (TAA/FSR) often suffer from ghosting or performance regressions during violent scene changes because the software algorithm must detect failure retrospectively.
-- TWRF proposes an integrated hardware mechanism where the ratio $C_t / C_r$ and change fraction $p$ are dynamically tracked to transition gracefully between persistent dataflow execution and unconditioned full recomputation.
+TWRF must therefore contribute at the architectural boundary: stable spatial work identity, persistent output/state, version validity, and hardware-oriented scheduling as a unified GPU execution abstraction.
 
----
+See Acar's Carnegie Mellon doctoral thesis and the self-adjusting computation literature for the underlying model.
 
-## 4. Prior-Art Comparison Matrix
+## 3. Named incremental computation and Adapton
 
-| Feature | Modern Desktop SIMT (NVIDIA / AMD) | Mobile TBDR (Apple / Qualcomm) | Temporal Super-Resolution (DLSS / FSR) | Proposed TWRF Architecture |
-| :--- | :--- | :--- | :--- | :--- |
-| **Primary Execution Model** | SIMT warp/wavefront dispatch | Tile binning + fragment dispatch | Post-process compute shaders | Persistent dataflow DAG |
-| **Inter-Frame Intermediate Reuse** | Uncached across frame boundaries | Flushed to DRAM at frame end | Software history buffers in VRAM | Persistent on-chip Logical State Store |
-| **Change Detection Mechanism** | None (unconditional recompute) | None (unconditional recompute) | Motion vector reprojection in shader | Hardware version tags + bounding checks |
-| **Ray Tracing Granularity** | Individual ray queries / hits | Software hybrid or dedicated RTU | N/A | Bounded ray batches in TWR nodes |
-| **Neural Integration** | Tensor MMA instructions in SM | Co-processor / NPU dispatch | Execution in compute pipeline | TWR graph node with temporal state |
-| **Worst-Case Cost Penalty** | 0% (baseline is full recompute) | 0% (baseline is full recompute) | Compute shader overhead on fast moves | $+176.4\%$ tracking tax at $p=1.0$ (documented) |
+Adapton extends incremental computation with demand-driven computation graphs and explicit names for reusable computation/cache locations.
 
----
+This is important because persistent identity is also present in incremental-computation systems.
 
-## 5. Summary & Novelty Posture
+TWRF therefore does not claim that "persistent identity + dependency graph" is novel in the abstract. Its distinction is that identity is attached to a **spatial graphics execution object** and participates directly in a GPU-style scheduling and persistence model.
 
-TWRF is a scientific research architecture designed to falsify or validate whether persistent spatial work regions can deliver net energy/cycle advantages over unconditional recomputation in real-time graphics. Claims of "first ever" or "universal GPU replacement" are unsupported and explicitly disclaimed. The value of TWRF lies in its rigorous, evidence-based quantification of where temporal dataflow succeeds ($p \le 10\%$) and where it fails ($p > 13\%$).
+## 4. Persistent and temporal resources in graphics
+
+Modern graphics render-graph systems already expose persistence.
+
+AMD's Render Pipeline Shaders documentation distinguishes external, persistent, transient, and temporal resources; persistent resources can survive render-graph updates, and temporal resources permit access to historical slices.
+
+PowerVR tile-based deferred rendering also establishes spatial tile decomposition and use of fast on-chip tile memory.
+
+Implication:
+
+> "Persistent graphics data" and "tile-local on-chip storage" are established ideas.
+
+The TWRF claim is narrower: the persistent entity is not only a resource or attachment. It is a **persistent work object** carrying identity, dependency validity, output state, and execution lifecycle.
+
+## 5. Incremental path-traced rendering
+
+TU Wien work on incremental updates of path-traced scenes during editing explicitly partitions image-space regions and incrementally re-renders affected regions rather than immediately rebuilding the complete image. Follow-on work uses adaptive priority policies and automatically identifies and schedules affected regions.
+
+This is close adjacent prior art to TWRF's regional temporal reuse.
+
+Implication:
+
+> Region-aware incremental rendering and affected-region scheduling already exist in graphics research.
+
+TWRF differs in research scope by asking whether the persistent region itself should be represented as a hardware-level computational object with state, validity, dependency edges, and a common scheduler across raster, ray, and neural workloads.
+
+## 6. GPU dynamic scheduling and render-graph systems
+
+Direct3D 12 Work Graphs are an important architectural neighbor. Microsoft describes Work Graphs as a GPU-autonomy mechanism in which GPU shader threads can create additional work while the system manages scheduling and memory for data flowing between tasks. This establishes that GPU-side dynamic work creation and dependency-aware scheduling are already practical API-level concepts.
+
+The distinction for TWRF is the temporal object being managed. Work Graphs primarily address GPU-generated work and producer/consumer execution within a graph. TWRF instead keeps a spatial work object's identity, output/state, validity information, and execution lifecycle across frame boundaries. The research question is therefore not whether GPU-managed graph scheduling exists, but whether persistent spatial work identity across frames is a useful architectural primitive in addition to existing graph/work-generation mechanisms.
+
+AMD's Render Pipeline Shaders SDK provides another adjacent reference point: it exposes render-graph node dependencies and persistent/temporal resource classes and uses graph information to schedule barriers, memory, and workload efficiently. This establishes that persistence and temporal resource access already exist in graphics render-graph systems. TWRF's proposed distinction is that persistence is attached to the work object itself, not only to the resource it reads or writes.
+
+Incremental path-traced rendering is also direct adjacent prior art. Ulschmid et al. describe adaptive priority-based incremental re-rendering that identifies and schedules affected image regions rather than immediately rebuilding the complete image. TWRF therefore does not claim region-aware incremental rendering as a first invention; its architectural question is whether persistent region work objects can provide a common hardware execution abstraction across raster, ray, and neural workloads.
+
+## 7. What the simulator actually evaluates
+
+The simulator is designed to separate the semantic question from the architectural-cost question.
+
+### Baseline A
+Unconditional full recomputation.
+
+### Baseline B
+A temporal-cache abstraction with tag lookup, validation, miss/refill and eviction costs.
+
+### Baseline C
+An executable software incremental scheduler using the same TWR graph, mutation events, kernels, persistent-state semantics, and semantic workset. Only the management mechanism differs: software B3 uses explicit scans and a software ready set; TWRF uses its architectural scheduler.
+
+This makes the central comparison:
+
+[
+C_{TWRF} quad	ext{vs.}quad C_{B3}
+]
+
+rather than comparing TWRF only to an intentionally non-incremental baseline.
+
+## 8. Adversarial equivalence test for competing mechanisms
+
+A mechanism should be regarded as semantically TWR-equivalent when it can represent and maintain all of the following:
+
+| Property | Required for TWR equivalence |
+|---|---|
+| Persistent identity | Yes |
+| Spatial extent | Yes |
+| Persistent output/state | Yes |
+| Input version/validity | Yes |
+| Dependency validity | Yes |
+| Cross-frame selective execution | Yes |
+| Explicit execution state | Yes |
+
+This is intentionally a **semantic equivalence test**, not a claim that previous systems literally implement TWRF.
+
+## 9. Defensible novelty statement
+
+A research-paper-safe formulation is:
+
+> Existing systems establish incremental computation, dependency-aware change propagation, persistent resources, spatial tiling, and incremental graphics independently or in partial combinations. TWRF investigates a GPU-oriented combination in which a persistent spatial computation is represented as a first-class work object carrying identity, state/output, input validity, dependency information, and scheduling state across frames. The work evaluates whether this organization reduces architectural management cost relative to full recomputation and an executable software incremental runtime.
+
+The phrase "investigates" is deliberate. A publication claim of novelty should be made only after a formal literature review beyond this repository-level survey.
+
+## 10. Key references
+
+1. Umut A. Acar, *Self-Adjusting Computation*, Carnegie Mellon University PhD thesis, 2005.
+2. Umut A. Acar et al., *A Library for Self-Adjusting Computation*, 2006.
+3. Matthew A. Hammer et al., *Adapton: Composable, Demand-Driven Incremental Computation*, PLDI 2014.
+4. Matthew A. Hammer et al., *Incremental Computation with Names*, OOPSLA 2015.
+5. AMD GPUOpen, *RPS Tutorial Part 2 – Exploring Render Graphs and RPSL*, persistent/temporal resource documentation.
+6. Imagination Technologies, *Tile-Based Deferred Rendering (TBDR)*, PowerVR architecture documentation.
+7. Pascal Hann, *Incremental Updates of Path-Traced Scenes during Editing*, TU Wien, 2022.
+8. Annalena Ulschmid, Bernhard Kerbl, Katharina Krösl, Michael Wimmer, *Real-Time Editing of Path-Traced Scenes with Prioritized Re-Rendering*, 2024.
+9. Annalena Ulschmid et al., *Automated Prioritization for Context-Aware Re-rendering in Editing*, 2025.
+
+## 11. Interpretation rule
+
+The project must never use "novel", "first", "unprecedented", or similar absolute language for individual mechanisms such as temporal reuse, memoization, dependency tracking, persistent resources, or region-based incremental rendering.
+
+The contribution under study is the **architectural combination and its measured/derived behavior**.

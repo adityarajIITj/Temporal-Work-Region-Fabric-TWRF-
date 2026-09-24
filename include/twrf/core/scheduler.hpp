@@ -53,7 +53,7 @@ public:
         // 1. Evaluate change detection for all TWRs against external resources
         for (const auto& [id, twr] : graph.twrs()) {
             metrics.dirty_evaluations++;
-            ChangeTracker::evaluate_dirty(*twr, graph, state_store);
+            ChangeTracker::evaluate_dirty(*twr, graph, state_store, &metrics);
         }
 
         // 2. Propagate dirty state downstream across the DAG
@@ -73,6 +73,7 @@ public:
             for (TWRId consumer_id : curr->downstream_consumers()) {
                 auto* consumer = graph.get_twr(consumer_id);
                 if (consumer && consumer->status() != TWRStatus::Dirty) {
+                    metrics.dirty_propagations++;
                     consumer->mark_dirty(ExecutionReason::ProducerOutputChanged);
                     dirty_queue.push(consumer_id);
                 }
@@ -108,7 +109,7 @@ public:
                 }
                 twr->set_pending_dependencies(active_dirty_producers);
                 if (active_dirty_producers == 0) {
-                    enqueue_ready(*twr);
+                    enqueue_ready(*twr, &metrics);
                 }
             }
         }
@@ -120,6 +121,7 @@ public:
 
         ReadyQueueItem item = ready_queue_.top();
         ready_queue_.pop();
+        metrics.ready_queue_pops++;
 
         auto* twr = graph.get_twr(item.twr_id);
         if (!twr) return false;
@@ -139,6 +141,15 @@ public:
 
         // Execute kernel
         bool success = twr->execute(state_store, inputs, step_counter_);
+
+        if (twr->dependency_audit_was_evaluated()) {
+            if (twr->dependency_audit_passed_last_execution()) {
+                metrics.dependency_audit_passes++;
+            } else {
+                metrics.dependency_audit_failures++;
+            }
+        }
+
         if (success) {
             metrics.total_twr_executions++;
             trace.record_execution(step_counter_, twr->id(), twr->name(),
@@ -154,10 +165,11 @@ public:
 
                 consumer->decrement_pending_dependencies();
                 if (consumer->pending_dependencies() == 0 && consumer->status() == TWRStatus::Dirty) {
-                    enqueue_ready(*consumer);
+                    enqueue_ready(*consumer, &metrics);
                 }
             }
         } else {
+            metrics.failed_executions++;
             // Retry failed work on a subsequent frame, but do not release any
             // downstream dependency. This prevents consumers from observing
             // stale producer output.
@@ -181,15 +193,18 @@ public:
     }
 
 private:
-    void enqueue_ready(TemporalWorkRegion& twr) {
+    void enqueue_ready(TemporalWorkRegion& twr, MetricsCollector* metrics = nullptr) {
         twr.set_ready();
         ready_queue_.push(ReadyQueueItem{
             twr.priority(),
             twr.topological_depth(),
             twr.id()
         });
+        if (metrics) metrics->ready_queue_pushes++;
     }
 
+    // Queue insertion accounting is performed here because every enqueue is
+    // a concrete architectural scheduler operation.
     std::priority_queue<ReadyQueueItem> ready_queue_;
     Timestamp step_counter_{0};
 };

@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstring>
 #include <stdexcept>
+#include <optional>
 
 namespace twrf {
 
@@ -47,6 +48,26 @@ public:
 
     bool has_slot(TWRId id) const noexcept {
         return slots_.find(id) != slots_.end();
+    }
+
+    [[nodiscard]] std::optional<TWRStateSlot> snapshot_output(TWRId id) const {
+        auto it = slots_.find(id);
+        if (it == slots_.end()) return std::nullopt;
+        return it->second;
+    }
+
+    void restore_output(TWRId id, const std::optional<TWRStateSlot>& snapshot) {
+        auto it = slots_.find(id);
+        const size_t current_size =
+            (it != slots_.end()) ? it->second.payload.size() : 0;
+        metrics_.current_allocated_bytes -= current_size;
+
+        if (snapshot.has_value()) {
+            metrics_.current_allocated_bytes += snapshot->payload.size();
+            slots_[id] = *snapshot;
+        } else if (it != slots_.end()) {
+            slots_.erase(it);
+        }
     }
 
     void allocate_slot(TWRId id, size_t initial_capacity = 0) {

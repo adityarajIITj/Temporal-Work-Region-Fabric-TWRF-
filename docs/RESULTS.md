@@ -57,7 +57,7 @@ For the clustered sweep:
 | 0.75 | 0.188 | 32,702.4 | 15,984.0 | 17,904.96 | 55,925.76 |
 | 1.00 | 1.000 | 31,779.2 | 15,984.0 | 27,824.0 | 51,921.28 |
 
-The dispersed matrix differs only where object placement changes the number of affected tiles:
+The dispersed matrix differs where object placement changes the number of affected tiles:
 
 | p_o | p_e | TWRF cycles | Full recompute A | Temporal cache B | Software incremental C |
 |---:|---:|---:|---:|---:|---:|
@@ -76,9 +76,9 @@ Under the current default timing parameters:
 1. TWRF is below the full-recompute model only in the completely static case p_e=0.
 2. At every nonzero clustered/dispersed mutation point in the tested matrix, TWRF is above the full-recompute model.
 3. The temporal-cache baseline has a lower derived cost than TWRF at every tested matrix point.
-4. The executable software incremental baseline also has a lower derived cost than TWRF at every tested matrix point.
-5. The TWRF/B3 cost ratio ranges from 1.634 to 2.400.
-6. To become cheaper than B3 at those measured points, TWRF would require a reduction in total modeled cost of approximately 38.8% to 58.3%, depending on the case.
+4. The executable software incremental baseline has a higher derived cost than TWRF at every tested matrix point.
+5. The B3/TWRF cost ratio ranges from 1.6338 to 2.4000. Equivalently, TWRF is approximately 38.8% to 58.3% lower cost than B3 across the 14 cases.
+6. The ratio is already greater than 1 for all 14 cases; no additional reduction is required for TWRF to fall below B3 under the default parameterization.
 
 These observations are not evidence that the architecture is impossible. They establish that the present parameterization does **not** justify claiming a demonstrated performance advantage for the TWRF hardware-oriented organization.
 
@@ -90,40 +90,57 @@ At requested p_o=0.50, dispersed mutation reaches p_e=0.1875 versus 0.125 for cl
 
 This demonstrates that spatial mutation pattern matters because it changes the number of persistent regions that must execute.
 
+## Component-level interpretation
+
+The final machine-readable output also includes cycle-component fields for TWRF and Baseline C.
+
+For the static clustered case, TWRF has no recomputation work, but it still incurs modeled change-detection and persistent State Store costs:
+
+- change detection: 6,080 cycles;
+- State Store: 6,553.6 cycles;
+- total: 12,633.6 cycles.
+
+For the clustered 5% requested-mutation case, where p_e=0.0625, TWRF spends 6,300 cycles on change detection and 6,963.2 cycles on State Store traffic in addition to 3,024 cycles of compute.
+
+This illustrates the central trade-off: avoiding most rendering work does not eliminate the cost of discovering validity or maintaining persistent state.
+
 ## Why the negative result is useful
 
 The central research question is not whether an incremental representation can outperform full recomputation in a hand-selected case. The stronger question is whether a dedicated hardware organization has enough control-plane advantage to justify architectural specialization over an equivalent software mechanism.
 
-The current results answer that question conservatively:
-
-**Under the default timing parameters and tested 14-case raster matrix, the evidence does not establish a TWRF advantage over Baseline C.**
+Under the default timing parameters and tested 14-case raster matrix, the model shows TWRF below Baseline C in all 14 cases. This remains a derived result, not a physical-hardware measurement.
 
 That is a legitimate research result because it identifies the management-cost boundary that a future implementation must overcome.
 
-## Required next research step
+## Sensitivity scope and remaining extensions
 
-The natural follow-up is a sensitivity study over the individual TWRF control-plane parameters:
+The implemented final sensitivity campaign varies:
 
-- version-check latency;
-- bounding-check latency;
-- ready-queue operation latency;
-- dependency-notification latency;
-- State Store latency;
-- region granularity;
-- State Store capacity.
+- version/checking, queue, and dependency-management costs through a common hardware control-plane multiplier;
+- State Store read/write latency through a dedicated multiplier;
+- region granularity through tile sizes 8, 16, and 32.
 
-The objective should be to identify the parameter region in which:
+The experiment therefore characterizes a controlled slice of the parameter space without tuning a single favorable point.
+
+Further extensions remain possible for future work, including independently varying each control-plane component, explicit State Store capacity pressure, dependency depth, and larger workload families. These are extensions to the frozen software study rather than prerequisites for interpreting the current result.
+
+All sensitivity interpretations must retain:
 
 C_TWRF < C_B3
 
-while retaining:
-
-FNI = 0
-
-and preserving execution/output parity.
-
-No timing parameter should be tuned merely to produce a favorable result; the complete sensitivity surface should be reported.
+only under the declared parameter setting, while preserving dependency-audit, oracle, and TWRF/B3 parity gates.
 
 ## Claim boundary
 
-The results should be described as **derived architectural simulation results**. They should not be converted into claims such as "X FPS faster", "Y% GPU speedup", or "lower power" without physical hardware measurements.
+The results are **derived architectural simulation results**. They must not be converted into claims such as “X FPS faster”, “Y% GPU speedup”, or “lower power” without physical hardware measurements.
+
+## Sensitivity campaign
+
+The final software experiment runner now provides a reproducible 135-setting sensitivity grid spanning three tile sizes, nine hardware control-plane multipliers, and five State Store latency multipliers. Each setting evaluates the complete 14-case clustered/dispersed mutation matrix.
+
+The generated artifact is `results/twrf_sensitivity.json`. Each setting evaluates the complete 14-case matrix. The grid is intended to characterize the boundary
+[
+C_{TWRF}<C_{B3}
+]
+rather than to optimize a single point. Numerical sensitivity values should be reported only after a completed build/run has generated the artifact.
+

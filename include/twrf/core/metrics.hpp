@@ -11,6 +11,17 @@ struct MetricsCollector {
     uint64_t total_twr_skips{0};
     uint64_t dependency_traversals{0};
     uint64_t dirty_evaluations{0};
+    uint64_t dependency_audit_passes{0};
+    uint64_t dependency_audit_failures{0};
+
+    // Gate-4 measured control-plane operations.
+    uint64_t resource_version_checks{0};
+    uint64_t producer_version_checks{0};
+    uint64_t bounding_checks{0};
+    uint64_t ready_queue_pushes{0};
+    uint64_t ready_queue_pops{0};
+    uint64_t dirty_propagations{0};
+    uint64_t failed_executions{0};
 
     [[nodiscard]] double skip_ratio() const noexcept {
         uint64_t total = total_twr_executions + total_twr_skips;
@@ -23,6 +34,15 @@ struct MetricsCollector {
         total_twr_skips = 0;
         dependency_traversals = 0;
         dirty_evaluations = 0;
+        dependency_audit_passes = 0;
+        dependency_audit_failures = 0;
+        resource_version_checks = 0;
+        producer_version_checks = 0;
+        bounding_checks = 0;
+        ready_queue_pushes = 0;
+        ready_queue_pops = 0;
+        dirty_propagations = 0;
+        failed_executions = 0;
     }
 };
 

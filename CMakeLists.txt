@@ -45,6 +45,9 @@ add_twrf_test(test_multi_frame tests/test_multi_frame.cpp)
 add_twrf_test(test_failure_propagation tests/test_failure_propagation.cpp)
 add_twrf_test(test_state_commit_failure tests/test_state_commit_failure.cpp)
 add_twrf_test(test_direct_dependency tests/test_direct_dependency.cpp)
+add_twrf_test(test_dependency_audit tests/test_dependency_audit.cpp)
+add_twrf_test(test_ray_camera_refresh tests/test_ray_camera_refresh.cpp)
+add_twrf_test(test_producer_dependency_audit tests/test_producer_dependency_audit.cpp)
 
 # Phase 2 (Sub-Plan 2): Functional Rasterizer & Reuse Tests
 add_twrf_test(test_raster_reuse tests/test_raster_reuse.cpp)
@@ -62,6 +65,9 @@ add_twrf_test(test_change_rate_sweep tests/test_change_rate_sweep.cpp)
 add_twrf_test(test_break_even_sanity tests/test_break_even_sanity.cpp)
 add_twrf_test(test_worst_case tests/test_worst_case.cpp)
 add_twrf_test(test_sweep_reproducibility tests/test_sweep_reproducibility.cpp)
+add_twrf_test(test_b3_parity tests/test_b3_parity.cpp)
+add_twrf_test(test_oracle_matrix tests/test_oracle_matrix.cpp)
+add_twrf_test(test_sensitivity_grid tests/test_sensitivity_grid.cpp)
 
 # Phase 4 (Sub-Plan 4): Ray + Neural Workloads, Cross-Workload DAG & Native API
 add_twrf_test(test_ray_batch_reuse tests/test_ray_batch_reuse.cpp)

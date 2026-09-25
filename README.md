@@ -1,268 +1,127 @@
-# Temporal Work Region Fabric (TWRF) with DOOM Virtual GPU Port
+# TWRF-DOOM
 
-Temporal Work Region Fabric (TWRF) is a research virtual-GPU architecture and execution model designed to evaluate persistent, spatially bounded computational work across frames.
-
-This repository branch (`twrf-doom`) integrates id Software's classic **DOOM (1993)** running natively on top of the TWRF virtual GPU architecture. The DOOM port serves as an empirical validation workload for temporal work reuse, demonstrating how spatial-temporal tiling and persistent on-chip state storage yield significant compute cycle reductions and speedups on complex interactive 3D workloads.
+Running Classic DOOM on an experimental virtual GPU that only renders what changes.
 
 ---
 
-## 1. Architectural Overview
+## The Big Idea
 
-The core abstraction of the architecture is the **Temporal Work Region (TWR)**: a persistent execution object characterized by a stable identifier, spatial bounding extent, versioned inputs, persistent output state, and explicit dependency tracking.
+Modern GPUs are brute-force machines. In most real-time games, large chunks of the screen look identical from one frame to the next, yet conventional hardware still recalculates every single pixel from scratch 60 or 120 times every second.
 
-Mathematically, each region $R_i$ is defined as:
+**Temporal Work Region Fabric (TWRF)** is an experimental virtual GPU architecture built to test a different approach: what happens if the GPU treats spatial regions as persistent, stateful objects across time? Instead of redrawing the entire display, TWRF tracks changes between frames and completely bypasses rendering for anything that stayed the same.
 
-$$R_i = (ID_i, A_i, S_i, I_i, O_i, V_i, \Sigma_i, D_i, Q_i)$$
-
-Where:
-- $ID_i$: Unique, persistent spatial identifier.
-- $A_i$: Spatial extent bounding box $[x_0, y_0, x_1, y_1]$.
-- $S_i$: Execution state ($\text{Clean}$, $\text{Dirty}$, $\text{Executing}$, $\text{Failed}$).
-- $I_i$: Versioned input bindings (geometry, textures, camera, uniforms).
-- $O_i$: Output buffers mapped to persistent on-chip SRAM.
-- $V_i$: Monotonic version tag.
-- $\Sigma_i$: Architectural execution signature.
-- $D_i$: Explicit dependency list of predecessor TWR IDs.
-- $Q_i$: Quality/LOD degradation constraint.
-
-Traditional GPU architectures execute workloads through stateless SIMT thread dispatches. In contrast, TWRF provides hardware-oriented scheduling that treats persistent spatial regions as first-class scheduling entities:
-
-$$\boxed{\text{Persistent Spatial Work Identity} + \text{Persistent State Store} + \text{Version/Change Tracking} + \text{Explicit Dependency Graph} + \text{Hardware Scheduling}}$$
+To stress-test this architecture on real interactive 3D gameplay, we ported id Software's legendary **DOOM (1993)** to run directly on top of the TWRF virtual GPU simulator.
 
 ---
 
-## 2. DOOM on TWRF Virtual GPU Architecture
+## Why DOOM?
 
-DOOM was ported to TWRF via the standard `doomgeneric` interface coupled with a custom TWRF bridge (`src/doom/doomgeneric_twrf.cpp`).
+DOOM is the classic proving ground for graphics architectures, but it also highlights real-world rendering redundancy:
 
-```
-+--------------------------------------------------------------------------+
-|                     DOOM Game Engine Core (id Software)                  |
-|          Tick -> World Simulation -> BSP Traversal -> Render Frame       |
-+--------------------------------------------------------------------------+
-                                    |
-                        32-bit Framebuffer (640x400)
-                                    v
-+--------------------------------------------------------------------------+
-|                     TWRF Spatial Tiling Engine                           |
-|        Decomposes Framebuffer into 16x16 Pixel Temporal Work Regions     |
-|                40 Horizontal x 25 Vertical = 1,000 TWR Tiles             |
-+--------------------------------------------------------------------------+
-                                    |
-                    +---------------+---------------+
-                    |                               |
-       Viewport Region (Rows 0-20)     Status Bar HUD (Rows 21-24)
-         Dynamic 3D Geometry              Persistent 2D Overlay
-                    |                               |
-                    +---------------+---------------+
-                                    v
-+--------------------------------------------------------------------------+
-|                  TWRF Change Tracker & Version Auditor                   |
-|        Evaluates input/geometry volatility against previous frame        |
-|        Identifies unchanged tiles vs. dirty regions                      |
-+--------------------------------------------------------------------------+
-             |                                              |
-      Dirty / Modified                                Unchanged / Valid
-             v                                              v
-+--------------------------+               +-------------------------------+
-| Execute Tile Kernel      |               | BYPASS RECOMPUTATION (SKIP)   |
-| Baseline Rendering Cost  |               | Cost = Zero Compute           |
-| Write back to Store      |               | Read Persistent State Output  |
-+--------------------------+               +-------------------------------+
-             |                                              |
-             +----------------------+-----------------------+
-                                    v
-+--------------------------------------------------------------------------+
-|                   TWRF On-Chip Logical State Store                       |
-|           1,000 Persistent SRAM Slots (1 MB Capacity Limit)              |
-|           Maintains committed frame outputs across boundaries            |
-+--------------------------------------------------------------------------+
-```
+1. **The Status Bar (HUD):** The bottom strip of the screen displays your health, ammo, weapons, and armor. In any given firefight, these pixels rarely change from frame to frame.
+2. **Corridors and Ceilings:** While walking forward down a hall or waiting in ambush, large blocks of textures and geometry remain static.
+3. **Action Bursts:** When turning corners or firing shotguns, localized regions update rapidly while the rest of the scene remains coherent.
 
-### Spatial-Temporal Decomposition
-- **Resolution:** $640 \times 400$ progressive display.
-- **Tile Dimension:** $16 \times 16$ pixels per TWR tile.
-- **Grid Structure:** $40 \text{ columns} \times 25 \text{ rows} = 1,000 \text{ total TWR tiles}$.
-- **Logical State Store:** 1,000 preallocated slots in high-speed persistent on-chip SRAM ($1,024 \text{ bytes per slot} = 1 \text{ MB total capacity}$).
-
-### Dual Temporal Regimes
-Interactive game engines exhibit sharp spatial contrast in temporal coherence:
-1. **Dynamic 3D Viewport (Rows 0-20):** Rapidly invalidates during player rotation and translation, but preserves significant temporal coherence during forward movement, corridor traversal, and static pauses ($15\% \text{ to } 40\%$ reuse).
-2. **Persistent Heads-Up Display (HUD, Rows 21-24):** The bottom $16\%$ of the screen contains the player status bar (ammo, health, arms, armor, and Doomguy status face). Unless health or ammo changes, these 160 tiles remain completely unchanged across successive frames ($94.9\%$ empirical persistence).
+Under traditional SIMT rasterization, all 256,000 pixels get pushed through the pipeline regardless. Under TWRF, the static parts cost almost zero compute.
 
 ---
 
-## 3. Empirical Evaluation & Results
+## How It Works
 
-The DOOM benchmark executes id Software's genuine Shareware `doom1.wad` (v1.9) through an automated 150-frame timedemo run (`demo1`, Episode 1 Mission 1: *Hangar*).
+1. **Spatial Tiling:** The 640x400 display is broken down into a clean grid of 16x16 pixel tiles (40 columns by 25 rows = 1,000 tiles per frame).
+2. **On-Chip State Store:** The virtual GPU reserves a dedicated 1 MB pool of persistent SRAM. Each tile gets its own cached output slot.
+3. **Change Detection:** At the start of a frame, TWRF checks each tile. If the underlying scene data hasn't moved, the tile's compute kernel is bypassed completely.
+4. **Instant Reuse:** The final frame simply reads the cached output from the state store for skipped tiles and blends in newly rendered tiles for dirty regions.
 
-### Benchmark Metrics Summary
+---
 
-| Metric | Measured Value | Architectural Significance |
+## Real Numbers from Real Gameplay
+
+We ran an automated 150-frame timedemo benchmark across Episode 1, Mission 1 (*Hangar*) using genuine id Software shareware assets (`doom1.wad`).
+
+| Metric | Result | What It Means |
 | :--- | :--- | :--- |
-| **Simulated Frames** | 150 frames | Multi-frame timedemo loop |
-| **Resolution** | $640 \times 400$ | 1,000 TWR tiles per frame |
-| **Total Tiles Evaluated** | 150,000 tiles | High statistical sample |
-| **Tiles Skipped (Reused)** | 59,677 tiles | **39.78% average tile skip ratio** |
-| **Tiles Executed** | 90,323 tiles | Only dynamically dirty tiles rendered |
-| **HUD Temporal Persistence** | **94.9%** | Persistent status bar reuse across frames |
-| **Baseline SIMT Cycles** | 37,500,000 cycles | Full recompute ($1,000 \times 250 \times 150$) |
-| **TWRF Simulated Cycles** | 24,848,750 cycles | Includes change tracking and state store access |
-| **Overall Speedup** | **1.51x** | **33.7% net cycle reduction** |
+| **Average Tiles Skipped** | **39.78%** | About 4 out of every 10 tiles never needed recalculation. |
+| **HUD Persistence** | **94.90%** | The status bar was almost completely reused across frames. |
+| **Cycle Reduction** | **33.7%** | A one-third reduction in total rendering work. |
+| **Measured Speedup** | **1.51x** | TWRF ran 51% faster than full-frame recomputation. |
 
-### Frame-by-Frame Behavior
-
-- **Frame 1 (Cold Start):** 1,000 tiles executed (0% reuse). All 1,000 slots allocated and populated in the Logical State Store.
-- **Frame 25 (Intro Sequence):** 870 tiles skipped (87.0% temporal reuse). High static background coherence.
-- **Frames 50-150 (Active E1M1 Combat & Traversal):** 15% to 25% viewport reuse during motion, with 100% status bar persistence on non-damage frames.
-
-### Graphical Artifacts
-
-- **Architectural Benchmark Plot:** `results/doom_twrf_benchmark.png` (displays frame-by-frame skip ratio and cumulative cycle divergence).
-- **Cold Start Snapshot:** `results/doom_frame0_cold.png` (initial frame render).
-- **Gameplay Snapshot:** `results/doom_frame25_gameplay.png` (intro sequence transition).
-- **Action Snapshot:** `results/doom_frame100_action.png` (E1M1 gameplay state).
-- **Machine-Readable Telemetry:** `results/doom_twrf_benchmark.json`.
+Visual artifacts and charts from this run are saved in the `results/` folder:
+- `doom_twrf_benchmark.png`: Frame-by-frame skip ratio and cumulative cycle curves.
+- `doom_twrf_benchmark.json`: Raw telemetry data for all 150 frames.
+- `doom_frame*.png`: Visual snapshots of cold start, intro screen, and active combat.
 
 ---
 
-## 4. Formal Cost Model
-
-TWRF formalizes the break-even condition under which temporal reuse outperforms full recomputation:
-
-$$\boxed{C_{\text{TWRF}}(p) = C_t + p \cdot C_r + (1 - p) \cdot C_s}$$
-
-Where:
-- $p$: Fraction of modified/dirty regions ($0 \le p \le 1$).
-- $C_r$: Full compute cost per region.
-- $C_t$: Version tracking and dependency validation overhead per region.
-- $C_s$: Persistent State Store read cost per region ($C_s \ll C_r$).
-
-The architecture achieves a performance win whenever:
-
-$$p < 1 - \frac{C_t - C_s}{C_r - C_s} \approx p^*$$
-
-For the DOOM workload with $C_r = 250$ cycles, $C_t = 15.6$ cycles, and $C_s = 0$ cycles, the break-even threshold is $p^* \approx 93.7\%$. Because DOOM maintains an average dirty rate of $p = 60.22\%$ ($39.78\%$ reuse), TWRF operates well within the profitable regime, achieving the measured $1.51\text{x}$ speedup.
-
----
-
-## 5. Repository Structure
-
-```
-.
-├── CMakeLists.txt              # Unified build configuration (C++20 & C99/GNU89)
-├── README.md                   # Project documentation
-├── implementation.md           # DOOM on TWRF architectural design specification
-├── run.ps1                     # Automated pipeline runner (Build, Test, Demo, DOOM, Plots)
-├── doom1.wad                   # Genuine id Software DOOM Shareware WAD
-│
-├── doomgeneric/                # DOOM engine C sources (submodule-free)
-│   └── doomgeneric/            # Source files (d_main.c, r_draw.c, p_tick.c, etc.)
-│
-├── include/
-│   └── twrf/
-│       ├── core/               # TWR types, state store, scheduler, change tracker
-│       ├── timing/             # Timing parameters and cycle accounting
-│       └── workloads/          # Raster, ray, and neural workload abstractions
-│
-├── src/
-│   ├── core/                   # C++20 core engine implementation
-│   ├── doom/
-│   │   └── doomgeneric_twrf.cpp # TWRF DOOM bridge, tile grid mapper, benchmark harness
-│   └── main.cpp                # Comprehensive TWRF demonstration runner
-│
-├── tests/                      # 35 rigorous CTest acceptance test suites
-├── python/
-│   └── analysis/
-│       ├── plot_break_even.py  # Scientific break-even curve generator
-│       └── plot_doom_results.py # DOOM frame-by-frame analysis and plot generator
-│
-└── results/                    # Generated experimental data, PNG plots, and JSON sweeps
-    ├── doom_twrf_benchmark.json
-    ├── doom_twrf_benchmark.png
-    ├── doom_frame0_cold.png
-    ├── doom_frame25_gameplay.png
-    ├── doom_frame100_action.png
-    ├── phase3_sweeps.json
-    └── break_even_curve.png
-```
-
----
-
-## 6. Build and Verification Instructions
+## Getting Started
 
 ### Prerequisites
+- A C++20 compiler (GCC 11+, Clang 13+, or MSVC 2019+). On Windows, MSYS2 UCRT64 GCC is recommended.
+- CMake 3.20+ and Ninja.
+- Python 3 with `matplotlib` and `Pillow` (for generating charts and converting frame dumps).
 
-- **C++ Compiler:** C++20 compliant compiler (GCC 11+, Clang 13+, or MSVC 2019+). On Windows, MSYS2 UCRT64 GCC 16+ is recommended.
-- **C Compiler:** C99 / GNU89 compliant compiler for DOOM sources.
-- **Build System:** CMake 3.20+ and Ninja.
-- **Python Runtime:** Python 3.9+ with `matplotlib` and `Pillow`.
-
-### Windows Quickstart (PowerShell)
-
-To run the complete pipeline (build, execute all 35 tests, run the core virtual GPU demo, execute the DOOM benchmark, and generate publication plots):
-
+### One-Click Run (Windows)
+Run the automated pipeline script from PowerShell:
 ```powershell
 .\run.ps1
 ```
+This single command builds the simulator, runs all 35 acceptance tests, executes the core demo, runs the 150-frame DOOM benchmark, and generates fresh graphs.
 
-### Manual Build & Execution
-
-#### 1. Configure and Build
+### Manual Build
 ```bash
-# Configure with CMake and Ninja
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-
-# Build all targets (libraries, tests, demo, and DOOM)
+# Configure and build
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
-```
 
-#### 2. Run Test Suite (35 Acceptance Tests)
-```bash
+# Run the 35 correctness tests
 ctest --test-dir build --output-on-failure
-```
 
-All 35 registered tests validate:
-- Zero false-negative invalidation ($FNI = 0$).
-- Strict determinism across scheduling permutations.
-- Exact output parity between incremental TWRF execution and full-recompute oracles.
-- State store capacity boundaries and eviction policies.
-
-#### 3. Run TWRF Core Simulator Demo
-```bash
-./build/twrf_demo
-```
-
-#### 4. Run TWRF-DOOM Benchmark
-```bash
+# Play / benchmark DOOM on TWRF
 ./build/twrf_doom
-```
-By default, `twrf_doom` executes a 150-frame automated timedemo benchmark over `doom1.wad`, writing telemetry to `results/doom_twrf_benchmark.json` and keyframe snapshots to `results/`.
 
-#### 5. Generate Visualizations and Architectural Plots
-```bash
-# Generate core break-even curves
-python python/analysis/plot_break_even.py
-
-# Generate DOOM frame-by-frame reuse curves and convert frame PPMs
+# Plot results
 python python/analysis/plot_doom_results.py
 ```
 
 ---
 
-## 7. Continuous Integration
+## Project Structure
 
-Automated CI is configured via `.github/workflows/validation.yml`, running on `ubuntu-latest`:
-- Compiles the full C++20/C codebase with strict warnings.
-- Executes all 35 acceptance tests under CTest.
-- Executes the core simulation demo and validates JSON schemas.
-- Executes the TWRF-DOOM benchmark and verifies performance metrics.
-- Uploads experimental artifacts and graphical results.
+- `src/doom/doomgeneric_twrf.cpp`: The bridge connecting the DOOM engine to TWRF's tile cache and state store.
+- `doomgeneric/`: Port-friendly C sources of classic DOOM.
+- `doom1.wad`: Genuine id Software Shareware game data (Episode 1: *Knee-Deep in the Dead*).
+- `include/twrf/`: Core virtual GPU headers (state store, schedulers, change trackers, cost models).
+- `src/core/`: Implementation of the TWRF virtual GPU architecture.
+- `tests/`: 35 rigorous CTest suites testing determinism, cache invalidation, and oracle parity.
+- `python/analysis/`: Lightweight visualization scripts that produce comparison curves.
+- `results/`: Output benchmarks, telemetry logs, and rendered graphs.
 
 ---
 
-## 8. License & Attribution
+## Correctness & Guarantees
 
-- **TWRF Simulator:** Research implementation licensed under the MIT License.
-- **DOOM Engine (doomgeneric):** Based on the original id Software DOOM source code released under the GNU General Public License v2 (GPL-2.0).
-- **DOOM Shareware WAD:** Copyright (C) 1993-1996 id Software LLC. Included for non-commercial research and evaluation.
+Incremental computing only matters if it looks right. TWRF includes a formal verification test suite with 35 automated checks to guarantee:
+- **Zero False Negatives:** If a region changed, it is never mistakenly skipped.
+- **Oracle Parity:** The output of incremental TWRF execution is bit-identical to running a full recomputation from scratch.
+- **Deterministic Scheduling:** Multi-threaded or out-of-order region completion always yields the same final frame.
+
+---
+
+## Licensing & Intellectual Property
+
+This project incorporates components distributed under distinct open-source and proprietary licenses:
+
+### 1. TWRF Architecture & Simulator (MIT License)
+The Temporal Work Region Fabric (TWRF) virtual GPU core simulator, scheduling abstractions, cost models, test suites, and analysis tools are open-source software licensed under the **MIT License**.
+- Permissive terms: you are free to use, copy, modify, merge, publish, distribute, and sublicense the code.
+- See the repository [`LICENSE`](LICENSE) file for the complete legal text.
+
+### 2. DOOM Engine Subsystem (GNU General Public License v2)
+The game engine integration in `doomgeneric/` and associated port bindings are derived from the 1997 id Software DOOM source code release, governed by the **GNU General Public License v2.0 (GPL-2.0)**.
+- Reciprocal terms: any redistribution or modification of the DOOM engine subsystem must remain open source under the GNU GPL v2.
+- For complete terms and conditions, refer to [`doomgeneric/LICENSE`](doomgeneric/LICENSE) or the Free Software Foundation GNU registry.
+
+### 3. id Software DOOM Assets (Shareware v1.9)
+The game data file `doom1.wad` contains the original shareware levels (Episode 1: *Knee-Deep in the Dead*) created by id Software (Copyright 1993-1996 id Software LLC).
+- Provided for non-commercial evaluation, benchmarking, and academic reproducibility.
+- Commercial game episodes require registered IWAD files purchased from id Software / Bethesda.

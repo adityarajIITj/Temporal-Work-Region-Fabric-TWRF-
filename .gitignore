@@ -6,6 +6,7 @@
 # 1. Initial Prompt & Instruction Documents
 # ------------------------------------------------------------------------------
 TWRF_4_SubPlans_Coding_Agent.md
+implementation.md
 richtext_converted_to_markdown.md
 
 # Scratch and smoke test files

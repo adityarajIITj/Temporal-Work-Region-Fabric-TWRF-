@@ -4,10 +4,13 @@ on:
   push:
     branches:
       - research/p0-semantic-hardening
+      - twrf-doom
+      - main
   workflow_dispatch:
   pull_request:
     branches:
       - main
+      - twrf-doom
 
 jobs:
   build-and-test:
@@ -15,6 +18,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install matplotlib pillow
 
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -59,6 +70,25 @@ jobs:
           print("JSON research-gate validation passed")
           PY
 
+      - name: Run DOOM TWRF Benchmark
+        run: ./build/twrf_doom --bench
+
+      - name: Run DOOM Analysis and Plotting
+        run: python3 python/analysis/plot_doom_results.py
+
+      - name: Validate DOOM Benchmark Output
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("results/doom_twrf_benchmark.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+          assert data["total_frames"] == 150
+          assert data["tile_grid"]["total"] == 1000
+          assert data["avg_skip_ratio"] > 0.35
+          assert data["hud_reuse_ratio"] > 0.90
+          assert data["speedup"] > 1.40
+          print("DOOM benchmark validation passed successfully")
+          PY
 
       - name: Upload experimental artifacts
         uses: actions/upload-artifact@v4
@@ -66,6 +96,9 @@ jobs:
           name: twrf-research-results
           path: |
             results/phase3_sweeps.json
-            results/twrf_architectural_comparison.png
+            results/break_even_curve.png
             results/twrf_sensitivity.json
+            results/doom_twrf_benchmark.json
+            results/doom_twrf_benchmark.png
+            results/doom_frame*.png
           if-no-files-found: warn

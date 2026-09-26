@@ -194,7 +194,7 @@ target_include_directories(twrf_doom PRIVATE
 target_link_libraries(twrf_doom PRIVATE twrf_core)
 
 if(WIN32)
-    target_link_libraries(twrf_doom PRIVATE winmm)
+    target_link_libraries(twrf_doom PRIVATE winmm gdi32 user32)
 endif()
 
 if(UNIX AND NOT APPLE)

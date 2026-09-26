@@ -60,28 +60,38 @@ Visual artifacts and charts from this run are saved in the `results/` folder:
 - CMake 3.20+ and Ninja.
 - Python 3 with `matplotlib` and `Pillow` (for generating charts and converting frame dumps).
 
-### One-Click Run (Windows)
+### Playing DOOM (Interactive Window)
+To launch and play DOOM interactively in a window on your desktop with keyboard controls:
+```powershell
+.\build\twrf_doom.exe
+```
+Controls:
+- **Move:** Arrow Keys or W / A / S / D
+- **Fire:** Ctrl
+- **Open Doors / Use:** Space
+- **Strafe:** A / D
+- **Run:** Shift
+- **Game Menu:** Esc
+- **Weapons:** 1 - 7
+
+To jump straight into Episode 1 Mission 1 (Hangar):
+```powershell
+.\build\twrf_doom.exe -warp 1 1
+```
+While playing, the window title bar continuously displays live TWRF metrics showing the current frame, the percentage of 16x16 tiles skipped, and whether the HUD status bar was cached.
+
+### Automated Benchmark Mode
+To run the automated 150-frame headless timedemo benchmark and generate performance metrics:
+```powershell
+.\build\twrf_doom.exe --bench
+```
+
+### One-Click Pipeline Run (Windows)
 Run the automated pipeline script from PowerShell:
 ```powershell
 .\run.ps1
 ```
-This single command builds the simulator, runs all 35 acceptance tests, executes the core demo, runs the 150-frame DOOM benchmark, and generates fresh graphs.
-
-### Manual Build
-```bash
-# Configure and build
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-
-# Run the 35 correctness tests
-ctest --test-dir build --output-on-failure
-
-# Play / benchmark DOOM on TWRF
-./build/twrf_doom
-
-# Plot results
-python python/analysis/plot_doom_results.py
-```
+This builds the simulator, runs all 35 acceptance tests, executes the core demo, runs the 150-frame DOOM benchmark, and generates fresh comparison graphs in `results/`.
 
 ---
 

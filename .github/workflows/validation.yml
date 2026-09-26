@@ -71,7 +71,7 @@ jobs:
           PY
 
       - name: Run DOOM TWRF Benchmark
-        run: ./build/twrf_doom
+        run: ./build/twrf_doom --bench
 
       - name: Run DOOM Analysis and Plotting
         run: python3 python/analysis/plot_doom_results.py

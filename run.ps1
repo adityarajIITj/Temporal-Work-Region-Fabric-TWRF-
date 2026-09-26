@@ -38,7 +38,7 @@ Write-Host "`n[STEP 3/5] Running Comprehensive TWRF Virtual GPU Demo..." -Foregr
 
 # 5. Run TWRF-DOOM Benchmark
 Write-Host "`n[STEP 4/5] Running TWRF-DOOM Benchmark (150-frame timedemo)..." -ForegroundColor Yellow
-.\build\twrf_doom.exe
+.\build\twrf_doom.exe --bench
 
 # 6. Generate graphical curves and analysis
 Write-Host "`n[STEP 5/5] Generating Scientific Plots with Python Analysis Suite..." -ForegroundColor Yellow

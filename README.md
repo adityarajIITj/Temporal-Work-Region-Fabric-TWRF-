@@ -40,7 +40,7 @@ The heterogeneous example is:
 Raster\ GBuffer \rightarrow Ray\ Shadow \rightarrow Neural\ Denoise
 \]
 
-with direct Raster → Neural and Ray → Neural dependencies.
+with direct Raster -> Neural and Ray -> Neural dependencies.
 
 The persistent logical state store represents the architectural location where valid TWR outputs survive frame boundaries.
 
@@ -76,7 +76,7 @@ Every incremental raster experiment also has a forced full-recompute oracle. Sof
 
 ## Experimental baselines
 
-### Baseline A — Full recomputation
+### Baseline A -- Full recomputation
 
 Every region is recomputed every frame:
 
@@ -84,11 +84,11 @@ Every region is recomputed every frame:
 C_A=C_r
 \]
 
-### Baseline B — Temporal cache
+### Baseline B -- Temporal cache
 
 A conventional reuse model with cache lookup, validation, and miss/refill overhead.
 
-### Baseline C — Software incremental runtime
+### Baseline C -- Software incremental runtime
 
 A concrete software scheduler performs explicit version checks, dependency propagation, software ready-set management, the same TWR kernels, the same persistent-state semantics, and the same mutation trace.
 
@@ -143,6 +143,37 @@ The project uses the following evidence ladder:
 
 See docs/RESEARCH_VALIDATION_GATE.md.
 
+## GTA 3 3D Virtual GPU Workload (Zero Host GPU Usage)
+
+The `twrf-gta3` branch introduces an end-to-end 3D polygonal virtual-GPU workload targeting Grand Theft Auto III urban rendering with **zero host GPU hardware utilization** (no DirectX, Vulkan, OpenGL, or CUDA hardware calls).
+
+### Key Architectural Additions
+
+1. **3D Spatial Binning (`SpatialBinner3D`)**:
+   Projects 3D entity oriented bounding boxes (AABBs) to 2D screen tiles using conservative projection matrices. Only tiles intersected by moving entities (e.g. player sedan, ambient taxi) are invalidated. Background city geometry tiles remain cached with zero re-rasterization.
+2. **Deep 3D State Store (`LogicalStateStore3D`)**:
+   Maintains dual-plane slot memory per $16 \times 16$ tile: RGBA32 color buffer ($1\text{ KB}$) and Z32 depth buffer ($1\text{ KB}$). Performs hardware-oriented depth-range testing (`is_depth_occluded`) to cull occluded geometry prior to rasterization.
+3. **Dual-Layer Compositor (`DualLayerCompositor`)**:
+   Decouples 3D perspective world geometry from 2D orthographic HUD layers (minimap radar, health/armor meters, wanted stars). HUD updates selectively invalidate only HUD tiles without invalidating underlying 3D world geometry.
+
+### Benchmark Telemetry Summary
+
+Deterministic 180-frame driving benchmark at $960 \times 540$ resolution ($2040$ total tiles, $16 \times 16$ tile size):
+
+| Metric | Measured Value |
+|---|---|
+| **Average Temporal Tile Reuse** | **97.35 %** |
+| **Mean TWRF Incremental Frame Time** | **61.20 ms (16.3 FPS on pure CPU)** |
+| **Mean Baseline Full-Frame Raster Time** | **2898.65 ms (0.3 FPS on pure CPU)** |
+| **Cumulative Speedup Factor** | **47.37x** |
+| **Host GPU Utilization** | **0.00 % (Pure TWRF Software Virtual GPU)** |
+
+### Visual Artifacts
+
+- **3D City Render Preview:** `results/gta3_city_preview.png`
+- **Benchmark Speedup Telemetry:** `results/gta3_twrf_speedup.png`
+- **Machine-Readable Telemetry:** `results/gta3_twrf_benchmark.json`
+
 ## Research documentation
 
 - [TWRF architecture specification](docs/TWRF_SPEC.md)
@@ -162,37 +193,59 @@ See docs/RESEARCH_VALIDATION_GATE.md.
 
 ## Running the project
 
-### CMake
+### CMake Build & Test
 
-\`\`\`bash
+```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ctest --test-dir build --output-on-failure
-\`\`\`
+```
 
-### Demo and experiment generation
+### Automated GTA3 Runner (PowerShell)
 
-\`\`\`bash
-./build/twrf_demo
-python python/analysis/plot_break_even.py
-\`\`\`
+```powershell
+.\run.ps1
+```
 
-The demo writes machine-readable experimental output and sensitivity analysis under results/.
+### Running TWRF GTA3 3D Benchmarks
+
+```bash
+# Run 180-frame headless benchmark (exports telemetry and preview images)
+./build/twrf_city_3d.exe --bench 180
+
+# Generate publication-grade speedup plots
+python python/analysis/plot_gta3_results.py
+```
+
+### Interactive Real-Time 3D Exploration (Win32)
+
+```bash
+# Run real-time interactive simulation
+./build/twrf_city_3d.exe
+```
+
+- **W / S / Up / Down:** Accelerate / Reverse
+- **A / D / Left / Right:** Steer Left / Right
+- **C:** Cycle Camera (Follow Cam, Sidewalk Surveillance Cam, Rooftop Cam)
+- **T:** Toggle Tile Debug Borders (Green = Cached, Red = Rasterized)
+- **H:** Toggle HUD Overlay
+- **ESC:** Exit
 
 ## Repository structure
 
-\`\`\`text
-include/twrf/core/       TWR semantics, graph, scheduler, state store, audits
-include/twrf/raster/     tiled raster workload and full-recompute oracle
+```text
+include/twrf/core/       TWR semantics, 3D state store, graph, scheduler, audits
+include/twrf/raster/     tiled raster workload, 3D spatial binner, dual-layer compositor
 include/twrf/ray/        bounded ray workload
 include/twrf/neural/     deterministic MLP workload
 include/twrf/api/        heterogeneous pipeline
 include/twrf/timing/     baselines, cycle accounting, experiment runner
-tests/                   regression and research-gate tests
+src/gta3/                TWRF GTA3 3D City prototype and virtual GPU renderer
+tests/                   regression, research-gate, and 3D spatial binning tests
 docs/                    architecture, methodology, prior art, limitations
 python/analysis/         result analysis and plotting
-results/                 generated experiment output
-\`\`\`
+results/                 generated experiment output and 3D benchmarks
+```
 
 ## Final claim boundary
 

@@ -5,11 +5,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Compiler warnings
+# Compiler warnings and static runtime linking
 if(MSVC)
     add_compile_options(/W4 /permissive-)
 else()
     add_compile_options(-Wall -Wextra -Wpedantic)
+    add_link_options(-static -static-libgcc -static-libstdc++)
 endif()
 
 # Core static library
@@ -85,8 +86,16 @@ target_include_directories(twrf_demo PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-
-
 # GTA3 3D Spatial Binning and Deep State Store Test
 add_twrf_test(test_3d_spatial_binning tests/test_3d_spatial_binning.cpp)
 
+# TWRF GTA3 3D City Virtual GPU Demonstration & Benchmark
+add_executable(twrf_city_3d src/gta3/twrf_city_3d.cpp)
+target_link_libraries(twrf_city_3d PRIVATE twrf_core)
+if(WIN32)
+    target_link_libraries(twrf_city_3d PRIVATE gdi32 user32)
+endif()
+target_include_directories(twrf_city_3d PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)

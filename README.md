@@ -1,137 +1,201 @@
-# TWRF-DOOM
+# Temporal Work Region Fabric (TWRF)
 
-Running Classic DOOM on an experimental virtual GPU that only renders what changes.
+Temporal Work Region Fabric (TWRF) is a **research virtual-GPU architecture and simulator** for studying persistent, spatially bounded computational work across frames.
 
----
+The central abstraction is the **Temporal Work Region (TWR)**: a persistent execution object with stable identity, spatial extent, persistent state/output, versioned inputs, explicit dependencies, and execution state.
 
-## The Big Idea
+\[
+R_i=(ID_i,A_i,S_i,I_i,O_i,V_i,\Sigma_i,D_i,Q_i)
+\]
 
-Modern GPUs are brute-force machines. In most real-time games, large chunks of the screen look identical from one frame to the next, yet conventional hardware still recalculates every single pixel from scratch 60 or 120 times every second.
+The research question is not whether incremental computation is possible. That is established by prior work. The question is whether making a persistent spatial work object a first-class hardware scheduling primitive can reduce incremental-management cost relative to both full recomputation and an equivalent software-managed incremental runtime.
 
-**Temporal Work Region Fabric (TWRF)** is an experimental virtual GPU architecture built to test a different approach: what happens if the GPU treats spatial regions as persistent, stateful objects across time? Instead of redrawing the entire display, TWRF tracks changes between frames and completely bypasses rendering for anything that stayed the same.
+\[
+\boxed{
+Persistent\ Spatial\ Work\ Identity
++
+Persistent\ State
++
+Version/Validity\ Tracking
++
+Explicit\ Dependency\ Graph
++
+Hardware-Oriented\ Scheduling
+}
+\]
 
-To stress-test this architecture on real interactive 3D gameplay, we ported id Software's legendary **DOOM (1993)** to run directly on top of the TWRF virtual GPU simulator.
+See the prior-art map in docs/PRIOR_ART.md for the claim boundary.
 
----
+## Architecture
 
-## Why DOOM?
+The simulator evaluates three workload classes under one execution contract:
 
-DOOM is the classic proving ground for graphics architectures, but it also highlights real-world rendering redundancy:
+- **Raster:** spatial screen tiles with persistent tile outputs.
+- **Ray:** bounded ray batches with versioned camera, geometry, and light inputs.
+- **Neural:** small MLP reconstruction blocks with persistent temporal output state.
 
-1. **The Status Bar (HUD):** The bottom strip of the screen displays your health, ammo, weapons, and armor. In any given firefight, these pixels rarely change from frame to frame.
-2. **Corridors and Ceilings:** While walking forward down a hall or waiting in ambush, large blocks of textures and geometry remain static.
-3. **Action Bursts:** When turning corners or firing shotguns, localized regions update rapidly while the rest of the scene remains coherent.
+The heterogeneous example is:
 
-Under traditional SIMT rasterization, all 256,000 pixels get pushed through the pipeline regardless. Under TWRF, the static parts cost almost zero compute.
+\[
+Raster\ GBuffer \rightarrow Ray\ Shadow \rightarrow Neural\ Denoise
+\]
 
----
+with direct Raster → Neural and Ray → Neural dependencies.
 
-## How It Works
+The persistent logical state store represents the architectural location where valid TWR outputs survive frame boundaries.
 
-1. **Spatial Tiling:** The 640x400 display is broken down into a clean grid of 16x16 pixel tiles (40 columns by 25 rows = 1,000 tiles per frame).
-2. **On-Chip State Store:** The virtual GPU reserves a dedicated 1 MB pool of persistent SRAM. Each tile gets its own cached output slot.
-3. **Change Detection:** At the start of a frame, TWRF checks each tile. If the underlying scene data hasn't moved, the tile's compute kernel is bypassed completely.
-4. **Instant Reuse:** The final frame simply reads the cached output from the state store for skipped tiles and blends in newly rendered tiles for dirty regions.
+## Correctness model
 
----
+Correctness is a first-class research gate.
 
-## Real Numbers from Real Gameplay
+A TWR becomes clean only after successful kernel completion, dependency-audit validation, and successful State Store output commit.
 
-We ran an automated 150-frame timedemo benchmark across Episode 1, Mission 1 (*Hangar*) using genuine id Software shareware assets (`doom1.wad`).
+\[
+ObservedMutableDependencies(R_i)
+\subseteq
+DeclaredDependencies(R_i)
+\]
 
-| Metric | Result | What It Means |
-| :--- | :--- | :--- |
-| **Average Tiles Skipped** | **39.78%** | About 4 out of every 10 tiles never needed recalculation. |
-| **HUD Persistence** | **94.90%** | The status bar was almost completely reused across frames. |
-| **Cycle Reduction** | **33.7%** | A one-third reduction in total rendering work. |
-| **Measured Speedup** | **1.51x** | TWRF ran 51% faster than full-frame recomputation. |
+The corresponding false-negative invalidation metric is:
 
-Visual artifacts and charts from this run are saved in the `results/` folder:
-- `doom_twrf_benchmark.png`: Frame-by-frame skip ratio and cumulative cycle curves.
-- `doom_twrf_benchmark.json`: Raw telemetry data for all 150 frames.
-- `doom_frame*.png`: Visual snapshots of cold start, intro screen, and active combat.
+\[
+FNI=
+\frac{Required\ invalidations\ missed}
+{Required\ invalidations}
+\]
 
----
+and the acceptance criterion is:
 
-## Getting Started
+\[
+\boxed{FNI=0}
+\]
 
-### Prerequisites
-- A C++20 compiler (GCC 11+, Clang 13+, or MSVC 2019+). On Windows, MSYS2 UCRT64 GCC is recommended.
-- CMake 3.20+ and Ninja.
-- Python 3 with `matplotlib` and `Pillow` (for generating charts and converting frame dumps).
+Conservative false-positive invalidation is permitted and measured separately.
 
-### Playing DOOM (Interactive Window)
-To launch and play DOOM interactively in a window on your desktop with keyboard controls:
-```powershell
-.\build\twrf_doom.exe
-```
-Controls:
-- **Move:** Arrow Keys or W / A / S / D
-- **Fire:** Ctrl
-- **Open Doors / Use:** Space
-- **Strafe:** A / D
-- **Run:** Shift
-- **Game Menu:** Esc
-- **Weapons:** 1 - 7
+Every incremental raster experiment also has a forced full-recompute oracle. Software Baseline C must execute the same semantic workset as TWRF before timing comparisons are interpreted.
 
-To jump straight into Episode 1 Mission 1 (Hangar):
-```powershell
-.\build\twrf_doom.exe -warp 1 1
-```
-While playing, the window title bar continuously displays live TWRF metrics showing the current frame, the percentage of 16x16 tiles skipped, and whether the HUD status bar was cached.
+## Experimental baselines
 
-### Automated Benchmark Mode
-To run the automated 150-frame headless timedemo benchmark and generate performance metrics:
-```powershell
-.\build\twrf_doom.exe --bench
-```
+### Baseline A — Full recomputation
 
-### One-Click Pipeline Run (Windows)
-Run the automated pipeline script from PowerShell:
-```powershell
-.\run.ps1
-```
-This builds the simulator, runs all 35 acceptance tests, executes the core demo, runs the 150-frame DOOM benchmark, and generates fresh comparison graphs in `results/`.
+Every region is recomputed every frame:
 
----
+\[
+C_A=C_r
+\]
 
-## Project Structure
+### Baseline B — Temporal cache
 
-- `src/doom/doomgeneric_twrf.cpp`: The bridge connecting the DOOM engine to TWRF's tile cache and state store.
-- `doomgeneric/`: Port-friendly C sources of classic DOOM.
-- `doom1.wad`: Genuine id Software Shareware game data (Episode 1: *Knee-Deep in the Dead*).
-- `include/twrf/`: Core virtual GPU headers (state store, schedulers, change trackers, cost models).
-- `src/core/`: Implementation of the TWRF virtual GPU architecture.
-- `tests/`: 35 rigorous CTest suites testing determinism, cache invalidation, and oracle parity.
-- `python/analysis/`: Lightweight visualization scripts that produce comparison curves.
-- `results/`: Output benchmarks, telemetry logs, and rendered graphs.
+A conventional reuse model with cache lookup, validation, and miss/refill overhead.
 
----
+### Baseline C — Software incremental runtime
 
-## Correctness & Guarantees
+A concrete software scheduler performs explicit version checks, dependency propagation, software ready-set management, the same TWR kernels, the same persistent-state semantics, and the same mutation trace.
 
-Incremental computing only matters if it looks right. TWRF includes a formal verification test suite with 35 automated checks to guarantee:
-- **Zero False Negatives:** If a region changed, it is never mistakenly skipped.
-- **Oracle Parity:** The output of incremental TWRF execution is bit-identical to running a full recomputation from scratch.
-- **Deterministic Scheduling:** Multi-threaded or out-of-order region completion always yields the same final frame.
+The principal architectural comparison is:
 
----
+\[
+C_{TWRF} \stackrel{?}{<} C_{B3}
+\]
 
-## Licensing & Intellectual Property
+not merely whether TWRF can beat full recomputation on temporally coherent workloads.
 
-This project incorporates components distributed under distinct open-source and proprietary licenses:
+## Measurement discipline
 
-### 1. TWRF Architecture & Simulator (MIT License)
-The Temporal Work Region Fabric (TWRF) virtual GPU core simulator, scheduling abstractions, cost models, test suites, and analysis tools are open-source software licensed under the **MIT License**.
-- Permissive terms: you are free to use, copy, modify, merge, publish, distribute, and sublicense the code.
-- See the repository [`LICENSE`](LICENSE) file for the complete legal text.
+The simulator records measured control-plane and State Store quantities separately from timing-model outputs.
 
-### 2. DOOM Engine Subsystem (GNU General Public License v2)
-The game engine integration in `doomgeneric/` and associated port bindings are derived from the 1997 id Software DOOM source code release, governed by the **GNU General Public License v2.0 (GPL-2.0)**.
-- Reciprocal terms: any redistribution or modification of the DOOM engine subsystem must remain open source under the GNU GPL v2.
-- For complete terms and conditions, refer to [`doomgeneric/LICENSE`](doomgeneric/LICENSE) or the Free Software Foundation GNU registry.
+### Measured simulator quantities
 
-### 3. id Software DOOM Assets (Shareware v1.9)
-The game data file `doom1.wad` contains the original shareware levels (Episode 1: *Knee-Deep in the Dead*) created by id Software (Copyright 1993-1996 id Software LLC).
-- Provided for non-commercial evaluation, benchmarking, and academic reproducibility.
-- Commercial game episodes require registered IWAD files purchased from id Software / Bethesda.
+Examples include TWR executions and skips, resource-version checks, producer-version checks, spatial bounding checks, dependency propagations/traversals, ready-set/queue pushes and pops, failed executions, State Store reads/writes, State Store bytes, execution traces, and dependency-audit outcomes.
+
+### Derived quantities
+
+Architectural cycle estimates are derived from parameterized timing constants:
+
+\[
+C=C_{compute}+C_{detect}+C_{schedule}+C_{dependency}+C_{state}+C_{memory}+C_{interconnect}
+\]
+
+They are **not measurements of a physical GPU**.
+
+### Hardware estimates
+
+FPGA resource figures and RTL mappings in docs/FPGA_FEASIBILITY.md are design estimates, not synthesized silicon measurements.
+
+## Experimental result
+
+The validated 14-case raster matrix shows execution/output parity and zero dependency-audit failures. Under the default timing parameters, TWRF has lower derived cost than the executable software incremental baseline in all 14 cases, while the temporal-cache baseline remains lower-cost than TWRF and full recomputation remains lower-cost for every non-static case. The 135-setting sensitivity campaign also places TWRF below Baseline C throughout the tested grid. These are derived timing-model results, not physical-GPU benchmarks.
+
+## Validation gates
+
+The project uses the following evidence ladder:
+
+1. semantic lifecycle correctness
+2. dependency soundness
+3. full-recompute output equivalence
+4. B3 execution-set parity
+5. B3 output parity
+6. measured simulator accounting
+7. parameterized timing comparison
+8. locality and volatility sweeps
+9. sensitivity analysis
+10. hardware realization study.
+
+See docs/RESEARCH_VALIDATION_GATE.md.
+
+## Research documentation
+
+- [TWRF architecture specification](docs/TWRF_SPEC.md)
+- [Formal execution semantics](docs/SEMANTICS.md)
+- [Research validation gates](docs/RESEARCH_VALIDATION_GATE.md)
+- [Experimental results](docs/RESULTS.md)
+- [Prior-art and originality boundary](docs/PRIOR_ART.md)
+- [Research claim matrix](docs/RESEARCH_CLAIM_MATRIX.md)
+- [Reproducibility manifest](docs/REPRODUCIBILITY_MANIFEST.md)
+- [Research freeze record](docs/RESEARCH_FREEZE.md)
+- [Limitations and threats to validity](docs/LIMITATIONS.md)
+- [FPGA/RTL feasibility](docs/FPGA_FEASIBILITY.md)
+- [Publication paper draft](docs/PAPER_DRAFT.md)
+- [Figures and tables plan](docs/FIGURES_AND_TABLES.md)
+- [Appendix assembly](docs/APPENDIX_INDEX.md)
+- [Publication freeze record](docs/PUBLICATION_FREEZE.md)
+
+## Running the project
+
+### CMake
+
+\`\`\`bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+ctest --test-dir build --output-on-failure
+\`\`\`
+
+### Demo and experiment generation
+
+\`\`\`bash
+./build/twrf_demo
+python python/analysis/plot_break_even.py
+\`\`\`
+
+The demo writes machine-readable experimental output and sensitivity analysis under results/.
+
+## Repository structure
+
+\`\`\`text
+include/twrf/core/       TWR semantics, graph, scheduler, state store, audits
+include/twrf/raster/     tiled raster workload and full-recompute oracle
+include/twrf/ray/        bounded ray workload
+include/twrf/neural/     deterministic MLP workload
+include/twrf/api/        heterogeneous pipeline
+include/twrf/timing/     baselines, cycle accounting, experiment runner
+tests/                   regression and research-gate tests
+docs/                    architecture, methodology, prior art, limitations
+python/analysis/         result analysis and plotting
+results/                 generated experiment output
+\`\`\`
+
+## Final claim boundary
+
+The strongest defensible statement supported by the architecture and simulator is:
+
+> TWRF implements and evaluates a persistent spatial work-region execution model in which region identity, state, validity, dependencies, and output survive across frames. The simulator compares this organization with full recomputation, temporal caching, and an equivalent software incremental scheduler under identical mutation traces. The architectural benefit is workload- and parameter-dependent and must be established from measured simulator operation counts and an explicitly parameterized timing model rather than assumed from temporal coherence alone.

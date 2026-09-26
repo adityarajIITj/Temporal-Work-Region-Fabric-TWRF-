@@ -86,3 +86,7 @@ target_include_directories(twrf_demo PRIVATE
 )
 
 
+
+# GTA3 3D Spatial Binning and Deep State Store Test
+add_twrf_test(test_3d_spatial_binning tests/test_3d_spatial_binning.cpp)
+

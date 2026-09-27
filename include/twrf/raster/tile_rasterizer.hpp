@@ -135,6 +135,12 @@ public:
                         ColorRGBA final_color;
                         if (tex) {
                             final_color = tex->sample(u, v);
+                            float r = w0 * tri.v[0].color.x + w1 * tri.v[1].color.x + w2 * tri.v[2].color.x;
+                            float g = w0 * tri.v[0].color.y + w1 * tri.v[1].color.y + w2 * tri.v[2].color.y;
+                            float b = w0 * tri.v[0].color.z + w1 * tri.v[1].color.z + w2 * tri.v[2].color.z;
+                            final_color.r = static_cast<uint8_t>(std::clamp(final_color.r * r, 0.0f, 255.0f));
+                            final_color.g = static_cast<uint8_t>(std::clamp(final_color.g * g, 0.0f, 255.0f));
+                            final_color.b = static_cast<uint8_t>(std::clamp(final_color.b * b, 0.0f, 255.0f));
                         } else {
                             float r = w0 * tri.v[0].color.x + w1 * tri.v[1].color.x + w2 * tri.v[2].color.x;
                             float g = w0 * tri.v[0].color.y + w1 * tri.v[1].color.y + w2 * tri.v[2].color.y;
@@ -146,7 +152,18 @@ public:
                                 255
                             );
                         }
-                        color_buf[idx] = final_color;
+                        if (final_color.a < 16) continue;
+                        if (final_color.a >= 240) {
+                            color_buf[idx] = final_color;
+                        } else {
+                            float a = final_color.a / 255.0f;
+                            float inv_a = 1.0f - a;
+                            auto& dst = color_buf[idx];
+                            dst.r = static_cast<uint8_t>(final_color.r * a + dst.r * inv_a);
+                            dst.g = static_cast<uint8_t>(final_color.g * a + dst.g * inv_a);
+                            dst.b = static_cast<uint8_t>(final_color.b * a + dst.b * inv_a);
+                            dst.a = 255;
+                        }
                     }
                 }
             }

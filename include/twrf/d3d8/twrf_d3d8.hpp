@@ -64,6 +64,8 @@ public:
     [[nodiscard]] D3DFORMAT format() const noexcept { return format_; }
     [[nodiscard]] const uint32_t* pixel_data() const noexcept { return pixels_.data(); }
     [[nodiscard]] uint32_t* pixel_data() noexcept { return pixels_.data(); }
+    [[nodiscard]] const void* raw_data() const noexcept { return pixels_.data(); }
+    [[nodiscard]] void* raw_data() noexcept { return pixels_.data(); }
 
 private:
     ULONG ref_count_{1};
@@ -108,6 +110,8 @@ public:
     STDMETHOD(AddDirtyRect)(const RECT* pDirtyRect) override;
 
     [[nodiscard]] raster::ColorRGBA sample_uv(float u, float v) const noexcept;
+    [[nodiscard]] const raster::Texture* get_raster_texture();
+    void mark_dirty() noexcept { dirty_ = true; }
     [[nodiscard]] UINT width() const noexcept { return width_; }
     [[nodiscard]] UINT height() const noexcept { return height_; }
 
@@ -120,6 +124,8 @@ private:
     DWORD usage_{0};
     D3DFORMAT format_{D3DFMT_A8R8G8B8};
     D3DPOOL pool_{D3DPOOL_MANAGED};
+    std::unique_ptr<raster::Texture> raster_tex_;
+    bool dirty_{true};
     std::vector<std::unique_ptr<TWRFDirect3DSurface8>> surfaces_;
 };
 

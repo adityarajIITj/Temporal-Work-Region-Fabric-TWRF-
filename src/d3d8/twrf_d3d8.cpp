@@ -87,11 +87,13 @@ HRESULT TWRFDirect3DSurface8::GetDesc(D3DSURFACE_DESC* pDesc) {
 
 HRESULT TWRFDirect3DSurface8::LockRect(D3DLOCKED_RECT* pLockedRect, const RECT* pRect, DWORD) {
     if (!pLockedRect) return D3DERR_INVALIDCALL;
-    pLockedRect->Pitch = width_ * sizeof(uint32_t);
+    bool is_16bit = (format_ == D3DFMT_R5G6B5 || format_ == D3DFMT_A1R5G5B5 || format_ == D3DFMT_A4R4G4B4);
+    UINT bytes_per_pixel = is_16bit ? 2 : 4;
+    pLockedRect->Pitch = width_ * bytes_per_pixel;
     if (!pRect) {
         pLockedRect->pBits = pixels_.data();
     } else {
-        pLockedRect->pBits = pixels_.data() + (pRect->top * width_ + pRect->left);
+        pLockedRect->pBits = reinterpret_cast<uint8_t*>(pixels_.data()) + (pRect->top * pLockedRect->Pitch + pRect->left * bytes_per_pixel);
     }
     return D3D_OK;
 }
@@ -163,8 +165,45 @@ HRESULT TWRFDirect3DTexture8::LockRect(UINT Level, D3DLOCKED_RECT* pLockedRect, 
 }
 
 HRESULT TWRFDirect3DTexture8::UnlockRect(UINT Level) {
+    dirty_ = true;
     if (Level >= surfaces_.size()) return D3DERR_INVALIDCALL;
     return surfaces_[Level]->UnlockRect();
+}
+
+const raster::Texture* TWRFDirect3DTexture8::get_raster_texture() {
+    if (surfaces_.empty()) return nullptr;
+    if (!raster_tex_) {
+        raster_tex_ = std::make_unique<raster::Texture>(width_, height_);
+        dirty_ = true;
+    }
+    if (dirty_) {
+        const auto* surf = surfaces_[0].get();
+        const uint8_t* raw = reinterpret_cast<const uint8_t*>(surf->raw_data());
+        bool is_16bit = (surf->format() == D3DFMT_R5G6B5 || surf->format() == D3DFMT_A1R5G5B5 || surf->format() == D3DFMT_A4R4G4B4);
+
+        for (UINT y = 0; y < height_; ++y) {
+            for (UINT x = 0; x < width_; ++x) {
+                raster::ColorRGBA col;
+                if (is_16bit) {
+                    uint16_t c = reinterpret_cast<const uint16_t*>(raw)[y * width_ + x];
+                    if (surf->format() == D3DFMT_R5G6B5) {
+                        col = raster::ColorRGBA(((c >> 11) & 0x1F) * 255 / 31, ((c >> 5) & 0x3F) * 255 / 63, (c & 0x1F) * 255 / 31, 255);
+                    } else if (surf->format() == D3DFMT_A1R5G5B5) {
+                        col = raster::ColorRGBA(((c >> 10) & 0x1F) * 255 / 31, ((c >> 5) & 0x1F) * 255 / 31, (c & 0x1F) * 255 / 31, (c & 0x8000) ? 255 : 0);
+                    } else {
+                        col = raster::ColorRGBA(((c >> 8) & 0x0F) * 17, ((c >> 4) & 0x0F) * 17, (c & 0x0F) * 17, ((c >> 12) & 0x0F) * 17);
+                    }
+                } else {
+                    uint32_t argb = reinterpret_cast<const uint32_t*>(raw)[y * width_ + x];
+                    uint8_t a = (surf->format() == D3DFMT_X8R8G8B8) ? 255 : ((argb >> 24) & 0xFF);
+                    col = raster::ColorRGBA((argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF, a);
+                }
+                raster_tex_->set_pixel(x, y, col);
+            }
+        }
+        dirty_ = false;
+    }
+    return raster_tex_.get();
 }
 
 HRESULT TWRFDirect3DTexture8::AddDirtyRect(const RECT*) {
@@ -554,6 +593,7 @@ void TWRFDirect3DDevice8::rasterize_triangle_primitive(const raster::Triangle& t
     raster::Mat4 mvp = is_screen_space ? raster::Mat4::identity() : (proj_matrix_ * view_matrix_ * world_matrix_);
     int tile_size = tile_config_.tile_size;
     int total_tiles = tile_config_.total_tiles();
+    const raster::Texture* tex = active_texture_ ? active_texture_->get_raster_texture() : nullptr;
 
     for (int i = 0; i < total_tiles; ++i) {
         auto bounds = tile_config_.get_tile_bounds(i);
@@ -561,7 +601,7 @@ void TWRFDirect3DDevice8::rasterize_triangle_primitive(const raster::Triangle& t
         if (!slot) continue;
 
         raster::TileRasterizer::rasterize_triangle_into_tile(
-            tri, mvp, nullptr,
+            tri, mvp, tex,
             width_, height_,
             bounds.min_x, bounds.min_y, tile_size,
             slot->color_buffer.data(), slot->depth_buffer.data()
@@ -583,11 +623,21 @@ HRESULT TWRFDirect3DDevice8::DrawPrimitiveUP(D3DPRIMITIVETYPE PrimitiveType, UIN
         raster::Vertex v{};
         v.pos = raster::Vec3(f[0], f[1], f[2]);
         if (is_rhw) {
-            // XYZRHW: f[0]=sx, f[1]=sy, f[2]=sz, f[3]=rhw
-            // Map screen coords to NDC [-1, 1] for unified pipeline
             float ndc_x = (f[0] / width_) * 2.0f - 1.0f;
             float ndc_y = 1.0f - (f[1] / height_) * 2.0f;
             v.pos = raster::Vec3(ndc_x, ndc_y, f[2]);
+        }
+        if (VertexStreamZeroStride >= 20) {
+            uint32_t col = *reinterpret_cast<const uint32_t*>(raw + idx * VertexStreamZeroStride + 16);
+            float a = ((col >> 24) & 0xFF) / 255.0f;
+            float r = ((col >> 16) & 0xFF) / 255.0f;
+            float g = ((col >> 8) & 0xFF) / 255.0f;
+            float b = (col & 0xFF) / 255.0f;
+            v.color = raster::Vec4(r, g, b, a);
+        }
+        if (VertexStreamZeroStride >= 28) {
+            const float* uv = reinterpret_cast<const float*>(raw + idx * VertexStreamZeroStride + 20);
+            v.uv = raster::Vec2(uv[0], uv[1]);
         }
         return v;
     };
@@ -701,6 +751,23 @@ HRESULT TWRFDirect3DDevice8::Present(const RECT*, const RECT*, HWND hDestWindowO
         StretchDIBits(hdc, 0, 0, width_, height_, 0, 0, width_, height_,
                       gdi_pixel_buffer_.data(), &bmi_, DIB_RGB_COLORS, SRCCOPY);
         ReleaseDC(target_hwnd, hdc);
+    }
+
+    if (frame_index_ >= 20 && (frame_index_ % 30 == 0 || frame_index_ == 60 || frame_index_ == 120 || frame_index_ == 180 || frame_index_ == 240)) {
+        char bmp_path[MAX_PATH];
+        snprintf(bmp_path, sizeof(bmp_path), "C:\\Users\\adity\\OneDrive\\73EC~1\\twrf-gta3\\results\\gta3_live_actual_game.bmp");
+        FILE* fp = fopen(bmp_path, "wb");
+        if (fp) {
+            BITMAPFILEHEADER bfh{};
+            bfh.bfType = 0x4D42;
+            bfh.bfSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + gdi_pixel_buffer_.size() * sizeof(uint32_t);
+            bfh.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+            fwrite(&bfh, sizeof(bfh), 1, fp);
+            fwrite(&bmi_.bmiHeader, sizeof(BITMAPINFOHEADER), 1, fp);
+            fwrite(gdi_pixel_buffer_.data(), sizeof(uint32_t), gdi_pixel_buffer_.size(), fp);
+            fclose(fp);
+            twrf_log("[TWRF Virtual GPU] Saved live authentic GTA 3 frame #" + std::to_string(frame_index_) + " to " + bmp_path);
+        }
     }
     return D3D_OK;
 }

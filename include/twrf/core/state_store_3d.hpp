@@ -97,6 +97,8 @@ public:
         return true;
     }
 
+    [[nodiscard]] TWR3DTileSlot* get_mutable_slot(TWRId id) noexcept { auto it = slots_.find(id); if (it == slots_.end()) return nullptr; return &it->second; }
+
     [[nodiscard]] const TWR3DTileSlot* read_tile(TWRId id) const {
         auto it = slots_.find(id);
         if (it == slots_.end()) return nullptr;

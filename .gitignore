@@ -104,3 +104,12 @@ $RECYCLE.BIN/
 .AppleDouble
 .LSOverride
 ._*
+
+# Game installations, disc images, and large preservation archives
+game/*.zip
+game/*.iso
+game/Grand Theft Auto III/
+game/GTA3_Game/
+game/extracted/
+*.iso
+*.img

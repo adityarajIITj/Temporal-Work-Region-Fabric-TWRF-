@@ -217,6 +217,29 @@ ctest --test-dir build --output-on-failure
 python python/analysis/plot_gta3_results.py
 ```
 
+
+### Running Authentic Rockstar Grand Theft Auto III on TWRF Virtual GPU
+
+TWRF provides a drop-in Direct3D 8 Software Virtual GPU driver (`d3d8.dll`) designed to intercept and execute the **original, commercial release of Grand Theft Auto III (Rockstar Games / RenderWare)** with **zero host GPU hardware utilization**:
+
+```bash
+# 1. Build TWRF Direct3D 8 Virtual GPU driver
+cmake --build build --target d3d8
+
+# 2. Run automated test harness
+ctest --test-dir build -R test_twrf_d3d8 --output-on-failure
+
+# 3. Launch authentic GTA 3 with TWRF virtual GPU driver
+# Place compiled d3d8.dll next to gta3.exe and run:
+./gta3.exe -nointro
+```
+
+**Driver Architecture:**
+- **COM Interface Interception:** Intercepts `Direct3DCreate8`, `IDirect3D8`, `IDirect3DDevice8`, textures, surfaces, and vertex/index buffers.
+- **TWRF 3D Tile Pipeline:** Directs 3D perspective draw calls and 2D orthographic RHW HUD draw calls into TWRF's `LogicalStateStore3D` and `TileRasterizer`.
+- **Pure CPU Blitting:** Presents memoized tile buffers directly to the OS window via GDI `SetDIBitsToDevice` / `StretchDIBits` without any host graphics hardware calls.
+- **Log Verification:** Records execution metrics, device configurations, and tile operations in `twrf_gta3.log`.
+
 ### Interactive Real-Time 3D Exploration (Win32)
 
 ```bash

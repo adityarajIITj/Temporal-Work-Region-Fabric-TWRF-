@@ -99,3 +99,27 @@ target_include_directories(twrf_city_3d PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+# TWRF Direct3D 8 Software Virtual GPU Interceptor (d3d8.dll for original GTA 3)
+if(WIN32)
+    add_library(d3d8 SHARED
+        src/d3d8/twrf_d3d8.cpp
+    )
+    target_link_libraries(d3d8 PRIVATE twrf_core gdi32 user32)
+    target_include_directories(d3d8 PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    set_target_properties(d3d8 PROPERTIES
+        PREFIX ""
+        OUTPUT_NAME "d3d8"
+    )
+    if(MINGW)
+        target_link_options(d3d8 PRIVATE "-Wl,--kill-at")
+    endif()
+
+    add_twrf_test(test_twrf_d3d8 tests/test_twrf_d3d8.cpp)
+    target_link_libraries(test_twrf_d3d8 PRIVATE gdi32 user32)
+    add_dependencies(test_twrf_d3d8 d3d8)
+
+endif()

@@ -476,8 +476,10 @@ HRESULT TWRFDirect3DDevice8::Clear(DWORD, const D3DRECT*, DWORD, D3DCOLOR Color,
 HRESULT TWRFDirect3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE State, const D3DMATRIX* pMatrix) {
     if (!pMatrix) return D3DERR_INVALIDCALL;
     raster::Mat4 m{};
-    for (int i = 0; i < 16; ++i) {
-        m.m[i] = pMatrix->m[i / 4][i % 4];
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            m.m[col * 4 + row] = pMatrix->m[row][col];
+        }
     }
 
     if (State == D3DTS_WORLD) {
@@ -493,8 +495,10 @@ HRESULT TWRFDirect3DDevice8::SetTransform(D3DTRANSFORMSTATETYPE State, const D3D
 HRESULT TWRFDirect3DDevice8::GetTransform(D3DTRANSFORMSTATETYPE State, D3DMATRIX* pMatrix) {
     if (!pMatrix) return D3DERR_INVALIDCALL;
     const raster::Mat4& m = (State == D3DTS_WORLD) ? world_matrix_ : (State == D3DTS_VIEW) ? view_matrix_ : proj_matrix_;
-    for (int i = 0; i < 16; ++i) {
-        pMatrix->m[i / 4][i % 4] = m.m[i];
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            pMatrix->m[row][col] = m.m[col * 4 + row];
+        }
     }
     return D3D_OK;
 }
@@ -685,6 +689,18 @@ HRESULT TWRFDirect3DDevice8::DrawIndexedPrimitiveUP(D3DPRIMITIVETYPE PrimitiveTy
             float ndc_y = 1.0f - (f[1] / height_) * 2.0f;
             v.pos = raster::Vec3(ndc_x, ndc_y, f[2]);
         }
+        if (VertexStreamZeroStride >= 20) {
+            uint32_t col = *reinterpret_cast<const uint32_t*>(raw + idx * VertexStreamZeroStride + 16);
+            float a = ((col >> 24) & 0xFF) / 255.0f;
+            float r = ((col >> 16) & 0xFF) / 255.0f;
+            float g = ((col >> 8) & 0xFF) / 255.0f;
+            float b = (col & 0xFF) / 255.0f;
+            v.color = raster::Vec4(r, g, b, a);
+        }
+        if (VertexStreamZeroStride >= 28) {
+            const float* uv = reinterpret_cast<const float*>(raw + idx * VertexStreamZeroStride + 20);
+            v.uv = raster::Vec2(uv[0], uv[1]);
+        }
         return v;
     };
 
@@ -753,7 +769,7 @@ HRESULT TWRFDirect3DDevice8::Present(const RECT*, const RECT*, HWND hDestWindowO
         ReleaseDC(target_hwnd, hdc);
     }
 
-    if (frame_index_ >= 20 && (frame_index_ % 30 == 0 || frame_index_ == 60 || frame_index_ == 120 || frame_index_ == 180 || frame_index_ == 240)) {
+    if (frame_index_ >= 5 && (frame_index_ % 5 == 0)) {
         char bmp_path[MAX_PATH];
         snprintf(bmp_path, sizeof(bmp_path), "C:\\Users\\adity\\OneDrive\\73EC~1\\twrf-gta3\\results\\gta3_live_actual_game.bmp");
         FILE* fp = fopen(bmp_path, "wb");
@@ -766,7 +782,9 @@ HRESULT TWRFDirect3DDevice8::Present(const RECT*, const RECT*, HWND hDestWindowO
             fwrite(&bmi_.bmiHeader, sizeof(BITMAPINFOHEADER), 1, fp);
             fwrite(gdi_pixel_buffer_.data(), sizeof(uint32_t), gdi_pixel_buffer_.size(), fp);
             fclose(fp);
-            twrf_log("[TWRF Virtual GPU] Saved live authentic GTA 3 frame #" + std::to_string(frame_index_) + " to " + bmp_path);
+            if (frame_index_ % 30 == 0) {
+                twrf_log("[TWRF Virtual GPU] Saved live authentic GTA 3 frame #" + std::to_string(frame_index_) + " to " + bmp_path);
+            }
         }
     }
     return D3D_OK;

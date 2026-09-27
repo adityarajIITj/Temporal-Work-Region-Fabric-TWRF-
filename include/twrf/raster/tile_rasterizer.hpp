@@ -115,9 +115,8 @@ public:
                 float w1 = edge_function(v2, v0, p) * inv_area;
                 float w2 = edge_function(v0, v1, p) * inv_area;
 
-                // Support both clockwise and counter-clockwise rendering
-                bool inside = (area > 0) ? (w0 >= -1e-4f && w1 >= -1e-4f && w2 >= -1e-4f)
-                                         : (w0 <= 1e-4f && w1 <= 1e-4f && w2 <= 1e-4f);
+                // Barycentric coordinates inside test
+                bool inside = (w0 >= -1e-4f && w1 >= -1e-4f && w2 >= -1e-4f);
 
                 if (inside) {
                     float z = w0 * p0.z + w1 * p1.z + w2 * p2.z;

@@ -62,18 +62,23 @@ public:
     [[nodiscard]] UINT width() const noexcept { return width_; }
     [[nodiscard]] UINT height() const noexcept { return height_; }
     [[nodiscard]] D3DFORMAT format() const noexcept { return format_; }
-    [[nodiscard]] const uint32_t* pixel_data() const noexcept { return pixels_.data(); }
-    [[nodiscard]] uint32_t* pixel_data() noexcept { return pixels_.data(); }
-    [[nodiscard]] const void* raw_data() const noexcept { return pixels_.data(); }
-    [[nodiscard]] void* raw_data() noexcept { return pixels_.data(); }
+    [[nodiscard]] const uint32_t* pixel_data() const noexcept { return reinterpret_cast<const uint32_t*>(buffer_.data()); }
+    [[nodiscard]] uint32_t* pixel_data() noexcept { return reinterpret_cast<uint32_t*>(buffer_.data()); }
+    [[nodiscard]] const void* raw_data() const noexcept { return buffer_.data(); }
+    [[nodiscard]] void* raw_data() noexcept { return buffer_.data(); }
+    [[nodiscard]] size_t buffer_size() const noexcept { return buffer_.size(); }
+    [[nodiscard]] uint8_t* raw_buffer() noexcept { return buffer_.data(); }
+    [[nodiscard]] const uint8_t* raw_buffer() const noexcept { return buffer_.data(); }
+    void set_container(IUnknown* container) noexcept { container_ = container; }
 
 private:
     ULONG ref_count_{1};
     IDirect3DDevice8* device_{nullptr};
+    IUnknown* container_{nullptr};
     UINT width_{0};
     UINT height_{0};
     D3DFORMAT format_{D3DFMT_A8R8G8B8};
-    std::vector<uint32_t> pixels_;
+    std::vector<uint8_t> buffer_;
 };
 
 // Texture Implementation
@@ -114,6 +119,8 @@ public:
     void mark_dirty() noexcept { dirty_ = true; }
     [[nodiscard]] UINT width() const noexcept { return width_; }
     [[nodiscard]] UINT height() const noexcept { return height_; }
+    [[nodiscard]] const std::vector<std::unique_ptr<TWRFDirect3DSurface8>>& surfaces() const noexcept { return surfaces_; }
+    [[nodiscard]] std::vector<std::unique_ptr<TWRFDirect3DSurface8>>& surfaces() noexcept { return surfaces_; }
 
 private:
     ULONG ref_count_{1};
@@ -316,6 +323,11 @@ public:
     STDMETHOD(CreateVertexBuffer)(UINT Length, DWORD Usage, DWORD FVF, D3DPOOL Pool, IDirect3DVertexBuffer8** ppVertexBuffer) override;
     STDMETHOD(CreateIndexBuffer)(UINT Length, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, IDirect3DIndexBuffer8** ppIndexBuffer) override;
 
+    [[nodiscard]] const PALETTEENTRY* get_palette(UINT idx) const noexcept {
+        return (idx < 256) ? palettes_[idx] : palettes_[0];
+    }
+    [[nodiscard]] UINT get_current_palette() const noexcept { return current_palette_; }
+
 private:
     ULONG ref_count_{1};
     TWRFDirect3D8* d3d_{nullptr};
@@ -347,6 +359,11 @@ private:
     TWRFDirect3DTexture8* active_texture_{nullptr};
 
     // Active Vertex & Index Streams
+    struct StreamSource {
+        IDirect3DVertexBuffer8* vbo{nullptr};
+        UINT stride{0};
+    };
+    StreamSource streams_[16]{};
     IDirect3DVertexBuffer8* current_vbo_{nullptr};
     UINT current_vbo_stride_{0};
     IDirect3DIndexBuffer8* current_ibo_{nullptr};
@@ -359,6 +376,8 @@ private:
     BITMAPINFO bmi_{};
     std::vector<uint32_t> gdi_pixel_buffer_;
     uint32_t frame_index_{0};
+    PALETTEENTRY palettes_[256][256]{};
+    UINT current_palette_{0};
 
     void rasterize_triangle_primitive(const raster::Triangle& tri, bool is_screen_space);
 };

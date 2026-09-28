@@ -53,29 +53,33 @@ public:
                                             const Texture* tex,
                                             int screen_w, int screen_h,
                                             int tile_x0, int tile_y0, int tile_size,
-                                            ColorRGBA* color_buf, float* depth_buf) noexcept {
+                                            ColorRGBA* color_buf, float* depth_buf,
+                                            bool is_screen_space = false) noexcept {
         // 1. Vertex transformation to clip space
         Vec4 c0 = mvp * Vec4(tri.v[0].pos, 1.0f);
         Vec4 c1 = mvp * Vec4(tri.v[1].pos, 1.0f);
         Vec4 c2 = mvp * Vec4(tri.v[2].pos, 1.0f);
 
-        // Near-plane culling
+        // Near-plane culling: only discard if all vertices behind camera
         if (c0.w <= 0.001f && c1.w <= 0.001f && c2.w <= 0.001f) return;
-        if (c0.w <= 0.001f || c1.w <= 0.001f || c2.w <= 0.001f) return;
+
+        float w0 = std::max(c0.w, 0.01f);
+        float w1 = std::max(c1.w, 0.01f);
+        float w2 = std::max(c2.w, 0.01f);
 
         // 2. Perspective divide -> Screen space coordinates
-        auto to_screen = [&](const Vec4& c) -> Vec3 {
-            float ndc_x = c.x / c.w;
-            float ndc_y = c.y / c.w;
-            float ndc_z = (c.z / c.w + 1.0f) * 0.5f; // [0, 1] range
+        auto to_screen = [&](const Vec4& c, float w) -> Vec3 {
+            float ndc_x = c.x / w;
+            float ndc_y = c.y / w;
+            float ndc_z = (c.z / w + 1.0f) * 0.5f; // [0, 1] range
             float sx = (ndc_x + 1.0f) * 0.5f * screen_w;
             float sy = (1.0f - (ndc_y + 1.0f) * 0.5f) * screen_h;
             return {sx, sy, ndc_z};
         };
 
-        Vec3 p0 = to_screen(c0);
-        Vec3 p1 = to_screen(c1);
-        Vec3 p2 = to_screen(c2);
+        Vec3 p0 = to_screen(c0, w0);
+        Vec3 p1 = to_screen(c1, w1);
+        Vec3 p2 = to_screen(c2, w2);
 
         // Triangle screen bounds
         float tri_min_x = std::min({p0.x, p1.x, p2.x});
@@ -124,9 +128,9 @@ public:
                     int local_y = y - tile_y0;
                     int idx = local_y * tile_size + local_x;
 
-                    if (z >= 0.0f && z < depth_buf[idx]) {
-                        depth_buf[idx] = z;
+                    bool depth_pass = is_screen_space || (z >= 0.0f && z <= depth_buf[idx] + 1e-4f);
 
+                    if (depth_pass) {
                         // Interpolate UV and color
                         float u = w0 * tri.v[0].uv.x + w1 * tri.v[1].uv.x + w2 * tri.v[2].uv.x;
                         float v = w0 * tri.v[0].uv.y + w1 * tri.v[1].uv.y + w2 * tri.v[2].uv.y;
@@ -152,6 +156,101 @@ public:
                             );
                         }
                         if (final_color.a < 16) continue;
+                        if (!is_screen_space) depth_buf[idx] = z;
+
+                        if (final_color.a >= 240) {
+                            color_buf[idx] = final_color;
+                        } else {
+                            float a = final_color.a / 255.0f;
+                            float inv_a = 1.0f - a;
+                            auto& dst = color_buf[idx];
+                            dst.r = static_cast<uint8_t>(final_color.r * a + dst.r * inv_a);
+                            dst.g = static_cast<uint8_t>(final_color.g * a + dst.g * inv_a);
+                            dst.b = static_cast<uint8_t>(final_color.b * a + dst.b * inv_a);
+                            dst.a = 255;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    static void rasterize_preprojected_triangle_into_tile(
+        const Triangle& tri,
+        const Vec3& p0, const Vec3& p1, const Vec3& p2,
+        float tri_min_x, float tri_max_x, float tri_min_y, float tri_max_y,
+        const Texture* tex,
+        int tile_x0, int tile_y0, int tile_size,
+        ColorRGBA* color_buf, float* depth_buf,
+        bool is_screen_space = false) noexcept {
+
+        int tile_x1 = tile_x0 + tile_size;
+        int tile_y1 = tile_y0 + tile_size;
+
+        if (tri_max_x < tile_x0 || tri_min_x >= tile_x1 ||
+            tri_max_y < tile_y0 || tri_min_y >= tile_y1) {
+            return;
+        }
+
+        int start_x = std::max(tile_x0, static_cast<int>(std::floor(tri_min_x)));
+        int end_x   = std::min(tile_x1 - 1, static_cast<int>(std::ceil(tri_max_x)));
+        int start_y = std::max(tile_y0, static_cast<int>(std::floor(tri_min_y)));
+        int end_y   = std::min(tile_y1 - 1, static_cast<int>(std::ceil(tri_max_y)));
+
+        Vec2 v0{p0.x, p0.y};
+        Vec2 v1{p1.x, p1.y};
+        Vec2 v2{p2.x, p2.y};
+
+        float area = edge_function(v0, v1, v2);
+        if (std::abs(area) < 1e-6f) return;
+
+        float inv_area = 1.0f / area;
+
+        for (int y = start_y; y <= end_y; ++y) {
+            for (int x = start_x; x <= end_x; ++x) {
+                Vec2 p{x + 0.5f, y + 0.5f};
+
+                float w0 = edge_function(v1, v2, p) * inv_area;
+                float w1 = edge_function(v2, v0, p) * inv_area;
+                float w2 = edge_function(v0, v1, p) * inv_area;
+
+                bool inside = (w0 >= -1e-4f && w1 >= -1e-4f && w2 >= -1e-4f);
+
+                if (inside) {
+                    float z = w0 * p0.z + w1 * p1.z + w2 * p2.z;
+                    int local_x = x - tile_x0;
+                    int local_y = y - tile_y0;
+                    int idx = local_y * tile_size + local_x;
+
+                    bool depth_pass = is_screen_space || (z >= 0.0f && z <= depth_buf[idx] + 1e-4f);
+
+                    if (depth_pass) {
+                        float u = w0 * tri.v[0].uv.x + w1 * tri.v[1].uv.x + w2 * tri.v[2].uv.x;
+                        float v = w0 * tri.v[0].uv.y + w1 * tri.v[1].uv.y + w2 * tri.v[2].uv.y;
+
+                        ColorRGBA final_color;
+                        if (tex) {
+                            final_color = tex->sample(u, v);
+                            float r = w0 * tri.v[0].color.x + w1 * tri.v[1].color.x + w2 * tri.v[2].color.x;
+                            float g = w0 * tri.v[0].color.y + w1 * tri.v[1].color.y + w2 * tri.v[2].color.y;
+                            float b = w0 * tri.v[0].color.z + w1 * tri.v[1].color.z + w2 * tri.v[2].color.z;
+                            final_color.r = static_cast<uint8_t>(std::clamp(final_color.r * r, 0.0f, 255.0f));
+                            final_color.g = static_cast<uint8_t>(std::clamp(final_color.g * g, 0.0f, 255.0f));
+                            final_color.b = static_cast<uint8_t>(std::clamp(final_color.b * b, 0.0f, 255.0f));
+                        } else {
+                            float r = w0 * tri.v[0].color.x + w1 * tri.v[1].color.x + w2 * tri.v[2].color.x;
+                            float g = w0 * tri.v[0].color.y + w1 * tri.v[1].color.y + w2 * tri.v[2].color.y;
+                            float b = w0 * tri.v[0].color.z + w1 * tri.v[1].color.z + w2 * tri.v[2].color.z;
+                            final_color = ColorRGBA(
+                                static_cast<uint8_t>(std::clamp(r * 255.0f, 0.0f, 255.0f)),
+                                static_cast<uint8_t>(std::clamp(g * 255.0f, 0.0f, 255.0f)),
+                                static_cast<uint8_t>(std::clamp(b * 255.0f, 0.0f, 255.0f)),
+                                255
+                            );
+                        }
+                        if (final_color.a < 16) continue;
+                        if (!is_screen_space) depth_buf[idx] = z;
+
                         if (final_color.a >= 240) {
                             color_buf[idx] = final_color;
                         } else {

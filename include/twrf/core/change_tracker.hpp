@@ -10,6 +10,13 @@ namespace twrf {
 
 class ChangeTracker {
 public:
+    /**
+     * @brief Evaluates whether a TWR requires re-execution in the current frame.
+     * Invariants:
+     * - Returns true immediately if the region is already flagged Dirty.
+     * - Bounded spatial overlap test is strictly conservative (false negatives impossible).
+     * - Any upstream producer version mismatch triggers immediate dirty propagation.
+     */
     static bool evaluate_dirty(TemporalWorkRegion& twr, const TWRGraph& graph, const LogicalStateStore& state_store, MetricsCollector* metrics = nullptr) {
         if (twr.status() == TWRStatus::Dirty) {
             return true; // Already dirty

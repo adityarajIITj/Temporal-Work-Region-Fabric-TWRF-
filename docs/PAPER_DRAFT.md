@@ -16,15 +16,11 @@ The research question is architectural rather than a claim that incremental comp
 
 ## 2. Research Questions and Contributions
 
-RQ1: Can persistent spatial computation be represented as a first-class execution object?
-
-RQ2: Can selective execution preserve unconditional-recompute output under the declared dependency contract?
-
-RQ3: Can an equivalent software incremental runtime reproduce the same semantic work?
-
-RQ4: Under what timing and architectural assumptions does hardware-oriented management have lower modeled cost than software incremental management?
-
-RQ5: Can one persistent execution contract cover raster, ray, neural, and heterogeneous dependency graphs?
+- **RQ1 (Representation):** Can persistent spatial computation be represented as a first-class hardware execution primitive $R_i$?
+- **RQ2 (Correctness):** Can selective incremental execution preserve identical numerical output relative to an unconditional recompute oracle $\mathcal{O}_{\text{full}}$?
+- **RQ3 (Equivalence):** Can an equivalent software-managed incremental runtime (Baseline C) reproduce the identical semantic execution set?
+- **RQ4 (Management Cost Boundary):** Under what parameter regimes does hardware-oriented scheduling exhibit lower total execution cost than software bookkeeping?
+- **RQ5 (Generality):** Can a unified persistent execution contract support raster, ray-tracing, and neural inference workloads under heterogeneous DAG dependencies?
 
 Contributions are the persistent spatial work-object model, explicit lifecycle/validity/dependency semantics, runtime dependency auditing, executable Baseline C, and a reproducible simulator/timing methodology.
 

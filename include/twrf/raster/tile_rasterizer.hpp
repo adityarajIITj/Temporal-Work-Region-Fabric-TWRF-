@@ -10,6 +10,13 @@
 
 namespace twrf::raster {
 
+/**
+ * @struct TileConfig
+ * @brief Spatial screen tiling layout configuration.
+ *
+ * Defines screen resolution partition into uniform $B \times B$ spatial work regions.
+ * Invariants: tile bounds are strictly clamped to [frame_width, frame_height].
+ */
 struct TileConfig {
     int frame_width{256};
     int frame_height{256};

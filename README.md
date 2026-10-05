@@ -194,6 +194,16 @@ python/analysis/         result analysis and plotting
 results/                 generated experiment output
 \`\`\`
 
+## Research Documentation Index
+
+| Topic | Document | Focus |
+| :--- | :--- | :--- |
+| **Architecture Specification** | [docs/TWRF_SPEC.md](docs/TWRF_SPEC.md) | Formal lifecycle, state store, and dependency contracts |
+| **Prior Art Boundary** | [docs/PRIOR_ART.md](docs/PRIOR_ART.md) | Positioning against Memoization, Adapton, and Work Graphs |
+| **Reproducibility Manifest** | [docs/REPRODUCIBILITY_MANIFEST.md](docs/REPRODUCIBILITY_MANIFEST.md) | Deterministic reproduction commands and parameter grids |
+| **Hardware Feasibility** | [docs/FPGA_FEASIBILITY.md](docs/FPGA_FEASIBILITY.md) | Synthesizable prototype subset and FPGA area estimates |
+| **Break-Even Analysis** | [docs/BREAK_EVEN.md](docs/BREAK_EVEN.md) | Analytical and empirical crossover boundary derivations |
+
 ## Final claim boundary
 
 The strongest defensible statement supported by the architecture and simulator is:

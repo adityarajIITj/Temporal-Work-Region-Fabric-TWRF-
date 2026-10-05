@@ -15,6 +15,12 @@ C_{TWRF}<C_{baseline}
 
 only for workloads and architectural parameters for which the savings from avoiding recomputation exceed the cost of maintaining temporal state and scheduling metadata.
 
+### 1.1 Formal domain bounds and invariant guarantees
+
+1. **State Isolation Invariant:** Outputs $O_i$ of region $R_i$ remain strictly immutable to external modification during any frame $t$ in which $Q_i = \text{IdleClean}$.
+2. **Version Monotonicity:** For any executed region $R_i$, version vectors satisfy $V_i^{(t)} \ge V_i^{(t-1)}$ across consecutive frame instances.
+3. **Bounded Overhead Guarantee:** The metadata management cost per region is $O(1)$ with respect to total screen resolution when bounded spatial work tiling is preserved.
+
 ## 2. Temporal Work Region
 
 A TWR is conceptually:

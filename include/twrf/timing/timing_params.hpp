@@ -5,6 +5,13 @@
 
 namespace twrf::timing {
 
+/**
+ * @struct TimingParameters
+ * @brief Cycle accounting constants calibrated for hardware vs software baselines.
+ *
+ * Models execution, scheduling, on-chip SRAM state store latency, and
+ * off-chip memory traffic across TWRF and conventional caching baselines.
+ */
 struct TimingParameters {
     // Computation parameters (Recompute work Cr)
     double cycles_per_triangle{40.0};

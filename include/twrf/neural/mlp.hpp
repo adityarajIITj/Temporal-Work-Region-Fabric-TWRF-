@@ -17,6 +17,11 @@ constexpr ResourceId NEURAL_WEIGHTS_RESOURCE_ID = 6000;
 constexpr ResourceId NEURAL_INPUT_RESOURCE_ID = 6001;
 constexpr TWRId NEURAL_TWR_ID = 30000;
 
+/**
+ * @struct MLPLayer
+ * @brief Fully-connected feedforward layer with weights, bias, and optional ReLU activation.
+ * Invariants: weights matrix dimension is (out_dim, in_dim); bias dimension matches out_dim.
+ */
 struct MLPLayer {
     Tensor2D weights;
     Tensor1D bias;

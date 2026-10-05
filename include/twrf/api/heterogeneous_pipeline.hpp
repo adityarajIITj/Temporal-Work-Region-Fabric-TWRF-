@@ -14,8 +14,14 @@
 #include <vector>
 #include <memory>
 #include <cmath>
-#include <iostream>
-
+/**
+ * @file heterogeneous_pipeline.hpp
+ * @brief Unified cross-workload TWR execution pipeline.
+ *
+ * Implements the canonical heterogeneous demonstration:
+ *   Raster GBuffer -> Ray Shadow -> Neural Denoise
+ * with explicit inter-TWR versioning and dependency propagation.
+ */
 namespace twrf::api {
 
 using raster::Vec3;

@@ -24,6 +24,15 @@ Windows PowerShell:
 .\run.ps1
 ```
 
+### Compiler and Toolchain Prerequisites
+
+| Component | Minimum Version | Verified Configuration | Role |
+| :--- | :--- | :--- | :--- |
+| **C++ Standard** | C++20 | ISO/IEC 14882:2020 | Language standard for concepts and spans |
+| **Compiler** | GCC 12+ / Clang 15+ / MSVC 19.34+ | GCC 14.2 (MinGW-w64 / MSYS2) | Host simulation compilation |
+| **CMake** | 3.24+ | CMake 3.30.3 | Build system generator |
+| **Python** | 3.9+ | Python 3.12 (Matplotlib, NumPy) | Benchmark telemetry plotting |
+
 ## Standard raster campaign
 
 Frame: 128 x 128

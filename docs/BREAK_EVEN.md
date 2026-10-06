@@ -38,6 +38,16 @@ p_e<1-\frac{C_t}{C_r}
 
 The right-hand side is an analytical threshold, not a measured universal property of GPUs.
 
+### 1.1 Analytical Expression Reference Table
+
+| Metric | Symbol | Definition | Physical Constraint |
+| :--- | :---: | :--- | :--- |
+| **Recomputation Cost** | $C_r$ | Cost to execute all kernels in region | $C_r > 0$ |
+| **Tracking/Scheduling Overhead** | $C_t$ | Cost of dirty evaluation + enqueue | $C_t \ge 0$ |
+| **Execution Fraction** | $p_e$ | Fraction of total regions re-executed | $0 \le p_e \le 1$ |
+| **Critical Execution Threshold** | $p_e^*$ | Upper bound: $1 - \frac{C_t}{C_r}$ | Valid iff $C_t < C_r$ |
+| **Net Operational Benefit** | $\Delta C$ | $(1 - p_e)C_r - C_t$ | Positive iff $p_e < p_e^*$ |
+
 ## 2. Why the old inverted expression is rejected
 
 The expression

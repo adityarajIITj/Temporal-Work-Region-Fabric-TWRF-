@@ -26,6 +26,15 @@ struct StateStoreMetrics {
     uint64_t capacity_limit_bytes{0}; // 0 = unlimited / parameter tracking only
 };
 
+/**
+ * @class LogicalStateStore
+ * @brief Persistent memory store for valid TWR output payloads across frame boundaries.
+ *
+ * Invariants:
+ * - Output versions are monotonic for each registered TWRId.
+ * - Read operations do not mutate payload contents or version tags.
+ * - Peak allocation tracking is monotonic and thread-safe in sequential execution.
+ */
 class LogicalStateStore {
 public:
     explicit LogicalStateStore(size_t capacity_limit_bytes = 0)

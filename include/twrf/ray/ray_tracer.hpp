@@ -23,6 +23,13 @@ struct RayLight {
     float intensity{1.0f};
 };
 
+/**
+ * @struct RayScene
+ * @brief Bounded analytical scene model for ray batch intersection testing.
+ *
+ * Encapsulates analytical geometric spheres, point light illumination, and camera position.
+ * Invariants: Intersection queries are strictly deterministic with IEEE-754 floating-point arithmetic.
+ */
 struct RayScene {
     std::vector<Sphere> spheres;
     RayLight light;

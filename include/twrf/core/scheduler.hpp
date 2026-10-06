@@ -14,6 +14,15 @@
 
 namespace twrf {
 
+/**
+ * @struct ReadyQueueItem
+ * @brief Prioritized item in the architectural TWR ready scoreboard.
+ *
+ * Enforces a strict deterministic total ordering:
+ * 1. Priority descending (higher priority first)
+ * 2. Topological depth descending (deeper stages first)
+ * 3. TWRId ascending (canonical tie-break)
+ */
 struct ReadyQueueItem {
     int32_t priority{0};
     uint32_t depth{0};

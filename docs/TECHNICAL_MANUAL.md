@@ -282,3 +282,11 @@ These require separate physical validation.
 The project is strongest when described as an architectural study of a persistent spatial work-object abstraction, not as a claim that all incremental computation or temporal rendering is new.
 
 The critical experiment is the comparison between TWRF and executable software incremental management under the same semantic workload.
+
+## 21. Execution Profiling and Artifact Inspection
+
+The simulation pipeline generates machine-readable outputs under `results/`:
+- `results/phase3_sweeps.json`: Complete 135-case parameter sweep recording raw operation counts ($C_r$, $C_t$), execution fractions ($p_e$), and modeled cycle metrics across baselines A, B, C, and TWRF.
+- `results/break_even_curve.png`: Telemetry visualization contrasting analytical crossover boundaries against measured empirical execution traces.
+
+All artifact schemas are strictly verified against bitwise reproducibility gates prior to publication freeze.

@@ -20,6 +20,16 @@ Executing -> Failed.
 
 A failed execution may be retried, but it does not publish a valid output or release downstream consumers.
 
+### 1.1 Formal State Transition Matrix
+
+| Current State $Q_t$ | Event / Trigger | Next State $Q_{t+1}$ | Output Validity | Downstream Action |
+| :--- | :--- | :--- | :--- | :--- |
+| **IdleClean** | Input version advance / Dirty producer | **Dirty** | Retains $V^{(t-1)}$ | Enqueues dirty notification |
+| **Dirty** | All dirty upstreams complete commit | **Ready** | Unchanged | Enters priority scoreboard |
+| **Ready** | Scheduler dispatches TEU datapath | **Executing** | Staged in local scratch | Active execution |
+| **Executing** | Kernel pass + Audit pass + Commit pass | **IdleClean** | Advances to $V^{(t)}$ | Releases downstream ready |
+| **Executing** | Kernel failure / Capacity abort | **Failed** | Rollback to $V^{(t-1)}$ | Withholds downstream release |
+
 ## 2. Clean-state invariant
 
 A TWR can become clean only after:

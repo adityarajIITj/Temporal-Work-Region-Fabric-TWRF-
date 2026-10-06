@@ -38,6 +38,16 @@ Use **hypothesis** for architectural claims that require hardware validation.
 
 Every performance statement in a paper or presentation should identify whether it is measured, derived, or estimated. A cycle count from the timing model must never be described as a physical GPU measurement.
 
+## Test Suite Verification Mapping
+
+| Claim Class | Primary Verification Test | Verification Gate |
+| :--- | :--- | :--- |
+| **Lifecycle & State Machine** | `tests/test_twr_lifecycle.cpp` | State transition validity ($FNI=0$) |
+| **Dependency Propagation** | `tests/test_dependency_propagation.cpp` | Dirty flag acyclic forward propagation |
+| **Bitwise Oracle Equivalence** | `tests/test_oracle_matrix.cpp` | 14/14 bitwise equality against full recompute |
+| **Software Baseline Parity** | `tests/test_b3_parity.cpp` | Execution-set and output parity with Baseline C |
+| **Heterogeneous Contract** | `tests/test_cross_workload_dag.cpp` | Cross-workload DAG (Raster $\to$ Ray $\to$ Neural) |
+
 ## Current research position
 
 The strongest supportable conclusion is that TWRF is a coherent, reproducible virtual-GPU architecture study of persistent spatial work objects and that its economic value is a parameter- and workload-dependent question. The current software evidence establishes semantics, dependency auditing, oracle parity, software-baseline parity, and a parameterized cost framework. It supports a derived model advantage over the executable software incremental baseline under the tested assumptions, but it does not establish physical GPU performance.

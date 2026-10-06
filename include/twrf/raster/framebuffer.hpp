@@ -9,6 +9,15 @@
 
 namespace twrf::raster {
 
+/**
+ * @class FrameBuffer
+ * @brief Software color and depth render target with contiguous memory layout.
+ *
+ * Invariants:
+ * - Color and depth buffers have exact size `width * height`.
+ * - Coordinates are 0-indexed with origin at top-left $(0, 0)$.
+ * - Out-of-bounds pixel accesses are safely bounds-checked and ignored.
+ */
 class FrameBuffer {
 public:
     FrameBuffer(int width, int height, ColorRGBA clear_col = ColorRGBA::black())

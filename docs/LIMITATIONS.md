@@ -202,3 +202,7 @@ Hardware study.
 ]
 
 Performance conclusions that bypass these gates should not be treated as final research evidence.
+
+## 16. Dynamic Topology and Spatial Deformation Boundaries
+
+The current spatial evaluation assumes piece-wise rigid object transforms and bounded spatial overlap. In scenes exhibiting radical non-rigid topological deformations or chaotic camera rotations where object dispersion causes $p_e \to 1.0$, TWRF exhibits negative operational margin due to $C_t$ management overhead. The architecture is explicitly designed for continuous temporal coherence rather than degenerate non-coherent workloads.

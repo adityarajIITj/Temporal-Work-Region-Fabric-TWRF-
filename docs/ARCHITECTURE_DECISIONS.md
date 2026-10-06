@@ -102,3 +102,9 @@ A performance comparison is interpretable only after:
 semantic correctness -> dependency soundness -> oracle equivalence -> B3 parity -> measured accounting -> timing analysis.
 
 This decision prevents a favorable timing model from compensating for a semantic mismatch.
+
+## ADR-014: Persistent State Store Atomic Commit Protocol
+
+TWR outputs remain staged in local execution buffers until kernel completion and dependency auditing succeed. Outputs are committed to the LogicalStateStore in a single atomic transaction advancing the region version number.
+
+Failed or interrupted kernels roll back local scratch space without corrupting surviving state store versions, ensuring zero fault contamination across frame boundaries.

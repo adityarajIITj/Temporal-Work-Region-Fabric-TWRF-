@@ -550,3 +550,9 @@ Estimated:
 - FPGA/RTL resource and timing feasibility until synthesis and hardware measurement exist.
 
 This separation is part of the research protocol.
+
+## 19. Concurrency and Thread-Safety Model
+
+- **Simulator Runtime:** Single-threaded deterministic sequential dispatch. No internal mutex synchronization is required or exposed across core scheduler routines.
+- **State Store Concurrency:** `LogicalStateStore::read_output()` is const-qualified with mutable profiling telemetry. Multi-threaded access requires external synchronization.
+- **Deterministic Replay:** Given identical input seeds and mutation sequences, all kernel dispatch orders and memory writes are bitwise reproducible.

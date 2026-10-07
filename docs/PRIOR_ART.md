@@ -104,10 +104,19 @@ An executable software incremental scheduler using the same TWR graph, mutation 
 This makes the central comparison:
 
 [
-C_{TWRF} quad	ext{vs.}quad C_{B3}
+C_{TWRF} \quad \text{vs.} \quad C_{B3}
 ]
 
 rather than comparing TWRF only to an intentionally non-incremental baseline.
+
+### 7.1 Taxonomy Comparison: TWRF vs Modern GPU Scheduling
+
+| Architecture / Framework | Scheduling Boundary | Persistent State Survives Frames | Explicit Spatial Work Tiling | Cross-Frame Dependency Pruning |
+| :--- | :--- | :---: | :---: | :---: |
+| **D3D12 / Vulkan Work Graphs** | Intra-frame GPU-driven node dispatch | No | No (Workgroup bounded) | No |
+| **TBDR (PowerVR / Apple)** | Intra-frame tile binning pass | No | Yes | No |
+| **Render Graph / RPS** | CPU/GPU barrier & resource aliasing | Transient | Coarse buffer | Coarse pass cull |
+| **TWRF (This Work)** | Inter-frame persistent spatial scoreboard | **Yes ($S_i, O_i$)** | **Yes ($A_i$)** | **Yes ($FNI=0$)** |
 
 ## 8. Adversarial equivalence test for competing mechanisms
 

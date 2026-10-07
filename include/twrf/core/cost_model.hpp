@@ -6,6 +6,14 @@
 
 namespace twrf {
 
+/**
+ * @class BreakEvenCostModel
+ * @brief Analytical evaluator for single-region and multi-tile break-even boundaries.
+ *
+ * Implements the canonical comparison:
+ *   E[TWRF] = C_t + p_e * C_r < C_r <=> p_e < 1 - (C_t / C_r)
+ * Enforces strict non-negativity and probability domain checks.
+ */
 class BreakEvenCostModel {
 public:
     // Expected recomputation cost: E[Full] = C_r

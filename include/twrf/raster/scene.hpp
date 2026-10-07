@@ -9,6 +9,13 @@
 
 namespace twrf::raster {
 
+/**
+ * @class Camera
+ * @brief Perspective pinhole camera model for 3D raster projection.
+ *
+ * Computes standard view, projection, and combined view-projection matrices.
+ * Invariants: Aspect ratio and field-of-view are strictly positive; near_z < far_z.
+ */
 class Camera {
 public:
     Vec3 position{0.0f, 0.0f, 3.0f};

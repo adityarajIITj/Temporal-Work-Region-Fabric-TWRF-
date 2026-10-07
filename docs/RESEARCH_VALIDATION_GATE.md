@@ -13,6 +13,16 @@ Acceptance:
 - failed State Store commits do not advance output versions;
 - failed producers do not release downstream consumers.
 
+### Gate Acceptance Status Checklist
+
+| Gate Level | Focus Area | Acceptance Criteria | Current Status |
+| :--- | :--- | :--- | :--- |
+| **Gate 0** | Build & Lifecycle | Clean compile, 0 regression test failures | Verified (Pass) |
+| **Gate 1** | Dependency Soundness | $\text{AuditFailures} = 0$, $FNI = 0$ | Verified (Pass) |
+| **Gate 2** | Full Recompute Oracle | Bitwise framebuffer identity ($\mathcal{O}_{\text{full}}$) | Verified (Pass) |
+| **Gate 3** | Baseline C Parity | Identical executed TWR set with Baseline C | Verified (Pass) |
+| **Gate 4** | Sensitivity Envelope | 135-case parameter grid monotonically bounded | Verified (Pass) |
+
 ## Gate 1 — Dependency soundness
 
 The required invariant is:

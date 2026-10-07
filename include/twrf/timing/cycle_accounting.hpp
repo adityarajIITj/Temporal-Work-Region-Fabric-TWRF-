@@ -7,6 +7,14 @@
 
 namespace twrf::timing {
 
+/**
+ * @struct CycleAccounting
+ * @brief Structural cycle breakdown across computation, tracking, and memory subsystems.
+ *
+ * Invariants:
+ * - All cycle component accumulators are non-negative ($\ge 0.0$).
+ * - Total cycles equals the exact algebraic sum of all active subsystems.
+ */
 struct CycleAccounting {
     double compute_cycles{0.0};
     double change_detect_cycles{0.0};

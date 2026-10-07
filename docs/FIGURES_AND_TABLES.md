@@ -18,10 +18,14 @@
 3. Baseline definitions.
 4. Correctness gates.
 5. Clustered timing matrix.
-6. Dispersed timing matrix.
-7. Sensitivity configuration: 3 x 9 x 5 = 135 settings and 1,890 scenario evaluations.
-8. Evidence classification.
-9. Limitations and threats to validity.
+### Artifact and Generator Mapping
+
+| Item | Canonical Title | Generating Script / Source | Primary Artifact File |
+| :--- | :--- | :--- | :--- |
+| **Figure 4** | Mutation vs Execution Fractions | `python/analysis/plot_break_even.py` | `results/break_even_curve.png` |
+| **Figure 7** | Sensitivity Sweep Surface (135 pts) | `src/main.cpp` (`--sensitivity`) | `results/phase3_sweeps.json` |
+| **Table 5** | Clustered Timing Parity Matrix | `tests/test_b3_parity.cpp` | `results/clustered_matrix.json` |
+| **Table 7** | Multi-Parameter Sensitivity Grid | `tests/test_sensitivity_grid.cpp` | `results/sensitivity_summary.csv` |
 
 ## Quantitative figure rule
 

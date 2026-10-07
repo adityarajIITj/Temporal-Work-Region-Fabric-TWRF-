@@ -12,6 +12,15 @@
 
 namespace twrf {
 
+/**
+ * @class TWRGraph
+ * @brief Dependency graph and container for versioned resources and persistent TWRs.
+ *
+ * Invariants:
+ * - Dependency connections form a directed acyclic graph (DAG).
+ * - Consumer registration reciprocally registers downstream notification edges.
+ * - Resource and TWR IDs are globally unique within a graph instance.
+ */
 class TWRGraph {
 public:
     TWRGraph() = default;

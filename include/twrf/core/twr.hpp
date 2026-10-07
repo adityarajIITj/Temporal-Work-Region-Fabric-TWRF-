@@ -28,6 +28,15 @@ using KernelCallback = std::function<bool(TemporalWorkRegion& self,
                                           LogicalStateStore& state_store,
                                           const std::vector<const VersionedResource*>& inputs)>;
 
+/**
+ * @class TemporalWorkRegion
+ * @brief Persistent spatial computational object surviving across frame boundaries.
+ *
+ * Invariants:
+ * - Persistent TWRId remains immutable across all frame iterations.
+ * - Transitions from Dirty to Ready only when all active producer dependencies complete.
+ * - Transitions to IdleClean only upon verified kernel success and state commit.
+ */
 class TemporalWorkRegion {
 public:
     TemporalWorkRegion(TWRId id, std::string name, BoundingRegion region = BoundingRegion::full_screen(), int32_t priority = 0)

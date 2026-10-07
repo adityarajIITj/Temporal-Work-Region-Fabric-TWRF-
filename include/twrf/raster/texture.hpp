@@ -7,6 +7,12 @@
 
 namespace twrf::raster {
 
+/**
+ * @struct ColorRGBA
+ * @brief 32-bit RGBA color representation with clamped channel operations.
+ *
+ * Invariants: Color channels remain strictly bounded within $[0, 255]$; default alpha is 255.
+ */
 struct ColorRGBA {
     uint8_t r{0};
     uint8_t g{0};

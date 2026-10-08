@@ -13,6 +13,11 @@ using raster::Vec3;
 using raster::Vec2;
 using raster::Mat4;
 
+/**
+ * @struct Ray
+ * @brief Parametric 3D ray with origin, direction, and valid interval [t_min, t_max].
+ * Invariants: t_min >= 0.0f; t_min < t_max.
+ */
 struct Ray {
     Vec3 origin;
     Vec3 direction; // Normalized

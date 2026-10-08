@@ -74,6 +74,14 @@ For positive (C_t), the incremental scheme therefore carries an overhead tax in 
 
 The formal test suite keeps this algebraic correction as an explicit invariant.
 
+### 2.1 Multi-Frame Amortization Boundary
+
+Over an evaluation window of $N$ consecutive frames with average execution fraction $\bar{p}_e$, the cumulative net cycle savings relative to full recomputation is:
+$$
+\Delta C_{\text{total}} = N \cdot \left( (1 - \bar{p}_e) C_r - C_t \right)
+$$
+Amortization succeeds whenever temporal coherence is sustained across multiple frames such that $\bar{p}_e < 1 - \frac{C_t}{C_r}$.
+
 ## 3. The implemented model is richer
 
 The simulator does not reduce the complete experiment to one (C_t) scalar.

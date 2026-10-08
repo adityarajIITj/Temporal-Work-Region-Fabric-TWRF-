@@ -87,6 +87,10 @@ Consumers are connected explicitly through TWRGraph.
 
 Frame preparation determines which dirty TWRs will actually execute and counts only those producers as pending dependencies. This prevents clean producers from blocking dirty consumers.
 
+### 6.1 Graph Decoupling Principle
+
+The directed acyclic graph topology of TWRs is configured statically during scene initialization, while execution dependencies and dirty propagation are dynamically evaluated on a per-frame basis, minimizing dynamic heap allocation overhead.
+
 ## 7. Dependency audit
 
 Built-in workloads enable the runtime dependency audit.

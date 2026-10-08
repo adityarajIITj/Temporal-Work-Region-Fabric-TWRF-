@@ -16,6 +16,11 @@ using Timestamp = uint64_t;
 constexpr VersionNumber INITIAL_VERSION = 1;
 constexpr VersionNumber INVALID_VERSION = 0;
 
+/**
+ * @enum TWRStatus
+ * @brief Discrete architectural execution states for a Temporal Work Region.
+ * Invariants: Transitions follow IdleClean -> Dirty -> Ready -> Executing -> IdleClean.
+ */
 enum class TWRStatus {
     IdleClean,
     Dirty,

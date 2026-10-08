@@ -8,6 +8,14 @@
 
 namespace twrf {
 
+/**
+ * @class VersionedResource
+ * @brief Explicitly tracked mutable input resource with monotonic versioning.
+ *
+ * Invariants:
+ * - Version number strictly increments monotonically upon every data mutation.
+ * - Spatial bounding region conservative filter bounds the affected area.
+ */
 class VersionedResource {
 public:
     VersionedResource(ResourceId id, std::string name, BoundingRegion bounds = BoundingRegion::full_screen())

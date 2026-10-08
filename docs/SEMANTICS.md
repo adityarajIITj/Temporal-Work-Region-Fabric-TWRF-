@@ -72,6 +72,10 @@ Optimization therefore becomes:
 
 min FPI subject to FNI=0.
 
+### 4.1 Zero-Tolerance Safety Guarantee
+
+An execution trace with $FNI > 0$ constitutes a critical correctness violation. The runtime auditor immediately aborts frame generation and logs all violated binding IDs if any uninvalidated TWR produces an output diverging from the oracle.
+
 ## 5. Version validity
 
 For each bound external resource r, the TWR stores a recorded version v_r.

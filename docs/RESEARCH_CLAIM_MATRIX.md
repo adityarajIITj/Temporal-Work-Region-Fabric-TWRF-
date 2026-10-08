@@ -48,6 +48,13 @@ Every performance statement in a paper or presentation should identify whether i
 | **Software Baseline Parity** | `tests/test_b3_parity.cpp` | Execution-set and output parity with Baseline C |
 | **Heterogeneous Contract** | `tests/test_cross_workload_dag.cpp` | Cross-workload DAG (Raster $\to$ Ray $\to$ Neural) |
 
+### Mathematical Invalidation Metrics
+
+- **False-Negative Invalidation Rate ($FNI$):**
+  $$FNI = \frac{\text{Required invalidations missed}}{\text{Total required invalidations}} \equiv 0$$
+- **False-Positive Invalidation Rate ($FPI$):**
+  $$FPI = \frac{\text{Benign regions unnecessarily invalidated}}{\text{Total unmutated regions}} \ge 0$$
+
 ## Current research position
 
 The strongest supportable conclusion is that TWRF is a coherent, reproducible virtual-GPU architecture study of persistent spatial work objects and that its economic value is a parameter- and workload-dependent question. The current software evidence establishes semantics, dependency auditing, oracle parity, software-baseline parity, and a parameterized cost framework. It supports a derived model advantage over the executable software incremental baseline under the tested assumptions, but it does not establish physical GPU performance.

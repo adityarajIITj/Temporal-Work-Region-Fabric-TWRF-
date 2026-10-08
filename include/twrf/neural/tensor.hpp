@@ -8,6 +8,11 @@
 
 namespace twrf::neural {
 
+/**
+ * @struct Tensor1D
+ * @brief Dense 1D floating-point tensor for neural activations and bias vectors.
+ * Invariants: Vector dimensions match during dot product and element-wise addition.
+ */
 struct Tensor1D {
     std::vector<float> data;
 

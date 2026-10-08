@@ -73,6 +73,7 @@ Illustrative prototype parameters:
 - Operating Frequency Target: **200 MHz**
 - Screen Configuration: $128 \times 128$ resolution, $16 \times 16$ tile granularity (64 total tiles).
 - State Store: 1 MB On-Chip Memory (512 KB color/depth + 256 KB ray buffers + 256 KB neural weights/states).
+- Clocking Topology: Synchronous single-clock fabric with dual-clock asynchronous FIFO interface to host PCIe / AXI-Lite registers.
 
 | Hardware Module | Estimated LUTs | Estimated Flip-Flops | DSP Slices | Block RAM (36Kb) | UltraRAM (288Kb) |
 | :--- | :---: | :---: | :---: | :---: | :---: |

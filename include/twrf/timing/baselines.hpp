@@ -13,6 +13,13 @@ struct TileRecomputeWork {
     double memory_cycles{0.0};
 };
 
+/**
+ * @class ArchitecturalModels
+ * @brief Cycle accounting evaluators for TWRF and baseline architectures (A, B, C).
+ *
+ * Models execution, scheduling, on-chip SRAM state store latency, and
+ * off-chip memory traffic calibrated against measured simulator event counters.
+ */
 class ArchitecturalModels {
 public:
     static TileRecomputeWork compute_tile_work(const raster::TWRFRenderer& renderer, int tile_idx, const TimingParameters& params) {

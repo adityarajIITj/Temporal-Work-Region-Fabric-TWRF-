@@ -19,6 +19,12 @@ struct TraceEntry {
     std::vector<std::pair<ResourceId, VersionNumber>> input_versions;
 };
 
+/**
+ * @class ExecutionTrace
+ * @brief Chronological trace recorder for TWR execution and skip events.
+ *
+ * Invariants: Trace entries are monotonically ordered by discrete simulation step timestamp.
+ */
 class ExecutionTrace {
 public:
     void record_execution(Timestamp step, TWRId twr_id, std::string twr_name,

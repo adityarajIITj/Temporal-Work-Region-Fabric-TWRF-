@@ -9,6 +9,10 @@ namespace twrf::raster {
 
 constexpr float PI = 3.14159265358979323846f;
 
+/**
+ * @struct Vec2
+ * @brief 2D floating-point geometric vector for UV coordinates and screen positions.
+ */
 struct Vec2 {
     float x{0.0f}, y{0.0f};
 

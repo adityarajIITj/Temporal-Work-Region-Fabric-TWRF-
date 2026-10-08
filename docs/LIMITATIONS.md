@@ -206,3 +206,7 @@ Performance conclusions that bypass these gates should not be treated as final r
 ## 16. Dynamic Topology and Spatial Deformation Boundaries
 
 The current spatial evaluation assumes piece-wise rigid object transforms and bounded spatial overlap. In scenes exhibiting radical non-rigid topological deformations or chaotic camera rotations where object dispersion causes $p_e \to 1.0$, TWRF exhibits negative operational margin due to $C_t$ management overhead. The architecture is explicitly designed for continuous temporal coherence rather than degenerate non-coherent workloads.
+
+## 17. On-Chip Memory Scaling and High-Resolution Workloads
+
+Scaling from evaluation resolutions ($128 \times 128$) to production 4K UHD resolutions ($3840 \times 2160$) requires either increasing tile size or scaling on-chip SRAM capacity proportionally. If on-chip State Store capacity is exceeded, spill traffic to off-chip DRAM will incur memory latency penalties that must be evaluated under physical hardware memory controllers.

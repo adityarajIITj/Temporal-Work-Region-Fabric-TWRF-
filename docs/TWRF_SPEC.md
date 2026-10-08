@@ -75,6 +75,10 @@ The correctness rule is:
 
 ObservedMutableDependencies(R_i) subset DeclaredDependencies(R_i).
 
+### 4.1 Recursive Multi-Tier Dependency Invalidation Invariant
+
+For any DAG path $R_u \to^* R_v$, if $R_u$ commits a new version $V_u^{(t)} > V_u^{(t-1)}$, then every transitive consumer $R_v$ is marked Dirty in topological order unless explicitly pruned by conservative spatial bounding filters.
+
 ## 5. Conservative invalidation
 
 The implementation intentionally permits false positives:

@@ -5,6 +5,12 @@
 
 namespace twrf {
 
+/**
+ * @struct MetricsCollector
+ * @brief Hardware telemetry counters for operations, audits, and control-plane transactions.
+ *
+ * Invariants: Telemetry counters are strictly monotonic during frame execution.
+ */
 struct MetricsCollector {
     uint64_t frames_executed{0};
     uint64_t total_twr_executions{0};

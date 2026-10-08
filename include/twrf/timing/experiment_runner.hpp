@@ -12,6 +12,13 @@
 
 namespace twrf::timing {
 
+/**
+ * @struct SweepDataPoint
+ * @brief Machine-readable telemetry record for a single experimental scenario.
+ *
+ * Records requested mutation rate $p_o$, dirty region fraction $p_r$, executed fraction $p_e$,
+ * and verified bitwise parity flags against Baseline C and full-recompute oracle.
+ */
 struct SweepDataPoint {
     double change_rate{0.0};              // Requested object-mutation parameter p_o.
     std::string locality;

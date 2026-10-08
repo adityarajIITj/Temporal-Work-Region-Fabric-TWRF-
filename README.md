@@ -170,6 +170,12 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 \`\`\`
 
+### Automated Validation
+
+```powershell
+.\run.ps1
+```
+
 ### Demo and experiment generation
 
 \`\`\`bash

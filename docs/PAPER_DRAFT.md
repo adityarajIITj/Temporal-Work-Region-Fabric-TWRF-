@@ -74,6 +74,10 @@ The principal trade-off is avoided recomputation versus persistent management. T
 
 The temporal-cache result is an important boundary: richer persistent work-object semantics carry additional cost that must be justified by capabilities beyond output reuse alone. TWRF is therefore best understood as an incremental execution fabric rather than a universal replacement for conventional GPU execution.
 
+### 11.1 Hardware-Software Co-Design Trade-Off
+
+The comparison between TWRF and Baseline C demonstrates that while both achieve identical semantic execution sets, offloading scoreboard status, priority queue ordering, and dirty bit checking to dedicated hardware logic eliminates software instruction overhead, achieving up to a 7.9x modeled speedup over pure software incremental runtime bookkeeping.
+
 ## 12. Limitations
 
 The evaluation is simulator-based and uses parameterized timing assumptions. No physical GPU, FPGA, or silicon performance measurement is presented. Mutation traces are controlled synthetic workloads. Dependency auditing requires explicit observation by instrumented kernels and is not automatic machine-code memory instrumentation. The quantitative matrix is raster-centric, and Baseline B is an abstraction rather than a commercial cache implementation.

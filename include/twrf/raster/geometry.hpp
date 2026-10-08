@@ -8,6 +8,11 @@
 
 namespace twrf::raster {
 
+/**
+ * @struct Vertex
+ * @brief Geometric vertex containing position, normal, UV texture coordinates, and RGBA color.
+ * Invariants: Attributes conform to standard 3D rendering pipeline conventions.
+ */
 struct Vertex {
     Vec3 pos;
     Vec3 normal{0, 0, 1};

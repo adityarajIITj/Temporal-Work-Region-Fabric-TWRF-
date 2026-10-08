@@ -108,3 +108,7 @@ This decision prevents a favorable timing model from compensating for a semantic
 TWR outputs remain staged in local execution buffers until kernel completion and dependency auditing succeed. Outputs are committed to the LogicalStateStore in a single atomic transaction advancing the region version number.
 
 Failed or interrupted kernels roll back local scratch space without corrupting surviving state store versions, ensuring zero fault contamination across frame boundaries.
+
+## ADR-015: Monotonic Version Number Overflow Safety
+
+Version numbers use 64-bit unsigned integers (`uint64_t`). At a continuous execution rate of 1,000 frames per second with 1,000,000 updates per frame, overflow cannot occur within 580,000 years of continuous operation, eliminating the need for periodic epoch rollover or version reset logic.
